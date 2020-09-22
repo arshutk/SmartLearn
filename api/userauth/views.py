@@ -1,9 +1,18 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, generics, mixins, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
 
 from rest_framework.permissions import AllowAny
-from .models import User
-from .serializers import UserSerializer
 from .permissions import IsLoggedInUserOrAdmin, IsAdminUser
+
+
+from .models import User, OtpModel
+from .serializers import UserSerializer
+
+from random import randint
+from django.core.mail import send_mail
+
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -19,3 +28,20 @@ class UserViewSet(viewsets.ModelViewSet):
         return [permission() for permission in permission_classes]
 
     
+class OtpCreation(APIView):
+    def post(self, request):
+        user_email = request.data.get("email", "")
+        if user_email:
+            user = User.objects.filter(email__iexact = user_email)
+            
+            if user.exists():
+                    return Response(status = None) # "User with this email already exists"
+            else:
+                    otp = randint(100000, 999999) 
+                    OtpModel.objects.create(otp = otp, otp_email = user_email)
+                    mail_body = f"Hello Your OTP for registration is {otp}"
+                    send_mail('OTP for registering on SmartLearn', mail_body, 'nidhi.smartlearn@gmail.com', [user_email], fail_silently = False) # OTP send krni h, string nahi
+                    return Response(status = status.HTTP_200_OK)
+        
+        else:
+            return Response(status = None) # "User must provide an email"

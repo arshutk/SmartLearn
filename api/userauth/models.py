@@ -19,6 +19,7 @@ class UserProfile(models.Model):
     picture     = models.ImageField(upload_to = 'images/', blank = True, null = True, max_length = 500)
      
         
-      
-    
-  
+
+class OtpModel(models.Model):
+    otp         = models.CharField(max_length = 6)
+    otp_email   = models.EmailField()
