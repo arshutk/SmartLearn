@@ -8,5 +8,6 @@ class Classroom(models.Model):
     standard = models.CharField(max_length=10,blank=False)
     branch = models.CharField(max_length=50,blank=True)
     section = models.CharField(max_length=5,default='1')
-    teacher = models.ForeignKey(UserProfile, on_delete=models.CASCADE,verbose_name="Teacher")
-    student = models.ManyToManyRel(to=UserProfile,field=('__all__'))
+    teacher = models.ForeignKey(UserProfile, on_delete=models.CASCADE,verbose_name="Teacher",related_name ='Teacher')
+    student = models.ManyToManyField(UserProfile,verbose_name="Student",related_name ='Student')
+
