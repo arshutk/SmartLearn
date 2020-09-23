@@ -9,7 +9,12 @@ from .permissions import IsStudent,IsTeacher
 from .serializers import ClassroomSerializer
 from userauth.permissions import IsLoggedInUserOrAdmin, IsAdminUser
 from rest_framework.response import Response
-
+import string
+import random
+def get_random_string(length):
+    letters = string.ascii_lowercase
+    result_str = ''.join(random.choice(letters) for i in range(length))
+    return result_str
 
 class ClassroomViewSet(viewsets.ModelViewSet):
     model = Classroom
@@ -25,6 +30,10 @@ class ClassroomViewSet(viewsets.ModelViewSet):
         data = request.data
         user = request.user
         teacher = UserProfile.objects.get(user=user).pk
+        random_code = get_random_string(6)
+        while(Classroom.objects.filter(class_code=random_code)) :
+            random_code = get_random_string(6)
+        data['class_code'] = random_code
         data['teacher'] = teacher
         data['student'] = []
         serializer = self.get_serializer(data=data)

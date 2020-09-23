@@ -1,6 +1,8 @@
 from django.db import models
 from userauth.models import UserProfile
+
 class Classroom(models.Model):
+    
     class_code = models.CharField(max_length=50,blank=False,unique=True)
     subject_name = models.CharField(max_length=50,blank=False)
   
