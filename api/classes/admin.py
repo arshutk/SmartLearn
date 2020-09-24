@@ -1,3 +1,6 @@
 from django.contrib import admin
+from .models import Classroom, DoubtSection
 
-# Register your models here.
+
+admin.site.register(Classroom)
+admin.site.register(DoubtSection)

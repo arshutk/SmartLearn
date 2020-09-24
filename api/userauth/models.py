@@ -20,6 +20,8 @@ class UserProfile(models.Model):
     name         = models.CharField(max_length = 30)
     picture      = models.ImageField(upload_to = 'images/', blank = True, null = True, max_length = 1500)
      
+    def __str__(self):
+        return self.name
         
 
 class OtpModel(models.Model):
