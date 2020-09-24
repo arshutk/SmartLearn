@@ -38,9 +38,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    # 'rest_auth',
-    # 'rest_framework.authtoken',
-    'userauth'
+    'rest_auth',
+    'rest_framework.authtoken',
+    'userauth',
+    'classes'
 ]
 
 MIDDLEWARE = [
@@ -129,11 +130,12 @@ import os
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
-#jwt authentication settings
+
+# jwt authentication settings
 REST_FRAMEWORK = {
      'DEFAULT_PERMISSION_CLASSES': [
          'rest_framework.permissions.IsAuthenticated',
-         'rest_framework.permissions.IsAdminUser',
+          'rest_framework.permissions.IsAdminUser',
          ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
      'rest_framework_simplejwt.authentication.JWTAuthentication',

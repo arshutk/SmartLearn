@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User, UserProfile
+from .models import User, UserProfile, OtpModel
 
 
 class UserProfileInline(admin.StackedInline):
@@ -26,3 +26,6 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ('email',)
     ordering = ('email',)
     inlines = (UserProfileInline, )
+    
+
+admin.site.register(OtpModel)
