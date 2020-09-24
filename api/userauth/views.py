@@ -13,6 +13,8 @@ from django.http import Http404
 from random import randint
 from django.core.mail import send_mail
 
+from datetime import datetime
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -31,8 +33,11 @@ class UserViewSet(viewsets.ModelViewSet):
 
         model_email      = query.otp_email 
         model_otp        = query.otp
-        
-        if user_email == model_email and user_otp == model_otp:
+        otp_creation_time= query.time_created.time().hour * 60 * 60 + query.time_created.time().minute * 60 + query.time_created.time().second
+        current_time = datetime.now().hour *60 *60 + datetime.now().minute*60 + datetime.now().second
+    
+        print(current_time - otp_creation_time > 70)
+        if user_email == model_email and user_otp == model_otp and (current_time - otp_creation_time < 70):
             serializer = UserSerializer(data = coming_data)
             if serializer.is_valid():
                 serializer.save()
@@ -41,15 +46,15 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.errors, status = status.HTTP_400_BAD_REQUEST)
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
-    def get_permissions(self):
-        permission_classes = []
-        if self.action == 'create':
-            permission_classes = [AllowAny]
-        elif self.action == 'retrieve' or self.action == 'update' or self.action == 'partial_update':
-            permission_classes = [IsLoggedInUserOrAdmin]
-        elif self.action == 'list' or self.action == 'destroy':
-            permission_classes = [IsAdminUser]
-        return [permission() for permission in permission_classes]
+    # def get_permissions(self):
+    #     permission_classes = []
+    #     if self.action == 'create':
+    #         permission_classes = [AllowAny]
+    #     elif self.action == 'retrieve' or self.action == 'update' or self.action == 'partial_update':
+    #         permission_classes = [IsLoggedInUserOrAdmin]
+    #     elif self.action == 'list' or self.action == 'destroy':
+    #         permission_classes = [IsAdminUser]
+    #     return [permission() for permission in permission_classes]
 
     
 class OtpCreation(APIView):
