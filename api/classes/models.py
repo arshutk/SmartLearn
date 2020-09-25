@@ -29,3 +29,26 @@ class DoubtSection(models.Model):
 
     def __str__(self):
         return f'{self.user} : {str(self.doubt_text)[:50]}'
+
+# {
+#     "doubt_text":"helpppp...!",
+#     "classroom": {
+#         "id":"1"
+#     },
+#     "user": {
+#         "id":"1"
+#     }
+# }
+# {
+#     "doubt_text":"helpppp...!",
+#     "classroom": "1",
+#     "user": "1"
+# }
+# {
+#     "id": 2,
+#     "time_created": "2020-09-25T09:41:44.081244Z",
+#     "doubt_text": "helpppp...!",
+#     "file": null,
+#     "classroom": 1,
+#     "user": 2
+# }

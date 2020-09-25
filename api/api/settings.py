@@ -110,7 +110,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'utc'
 
 USE_I18N = True
 
@@ -139,6 +139,7 @@ REST_FRAMEWORK = {
         ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
     'rest_framework_simplejwt.authentication.JWTAuthentication',
+    'rest_framework.authentication.BasicAuthentication'
     )
 }
 
@@ -150,3 +151,4 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = 'nidhi.smartlearn@gmail.com'
 EMAIL_HOST_PASSWORD = 'nidhi@smart'
 EMAIL_USE_TLS=True
+

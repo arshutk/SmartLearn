@@ -11,4 +11,4 @@ class IsStudent(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         user = UserProfile.objects.get(user=request.user)
         return user in obj.student.all()
-         
+        

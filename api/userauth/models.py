@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from django.utils import timezone
 
 class User(AbstractUser):
     username     = models.CharField(blank=True, null=True, max_length = 30)
@@ -27,7 +28,7 @@ class UserProfile(models.Model):
 class OtpModel(models.Model):
     otp          = models.CharField(max_length = 6)
     otp_email    = models.EmailField()
-    time_created = models.DateTimeField(auto_now_add = True)
+    time_created = models.IntegerField()
 
     def __str__(self):
         return f"{self.otp_email} : {self.otp}"

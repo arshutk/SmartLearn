@@ -78,10 +78,6 @@ class ClassjoinView(APIView):
         return Response({'detail': f'{ request.user.email }joined{class_join.id} succesfully'}, status=status.HTTP_201_CREATED)
 
 
-# class DoubtSectionView(viewsets.ModelViewSet):
-#     queryset = DoubtSection.objects.all()
-#     serializer_class = DoubtSectionSerializer    
-
 class DoubtSectionList(APIView):
 
     def get(self, request):
