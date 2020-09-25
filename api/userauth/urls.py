@@ -11,10 +11,9 @@ router.register(r'users', UserViewSet)
 
 urlpatterns = [
     url(r'^', include(router.urls)),
-
     path('login/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('login/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
-
+    path('class/',include('classes.urls')),
     path('otp/', OtpCreation.as_view()),
     
 ] 

@@ -30,6 +30,7 @@ class AnswerSheet(models.Model):
     file_linked = models.FileField(upload_to="class/answers", blank=True, max_length= 1500000)
     marks_scored = models.DecimalField(max_digits=5,decimal_places=1,default=0)
     late_submitted = models.BooleanField(default=False)
+    checked = models.BooleanField(default=False)
     assignment = models.ForeignKey(Assignment,on_delete=models.CASCADE,verbose_name="question")
     student = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     def __str__(self):

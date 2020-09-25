@@ -4,18 +4,21 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from django.conf.urls.static import static
 from django.urls import path
 from rest_framework import routers
-from .views import ClassroomViewSet,ClassjoinView,AssignmentPost,AnswerSheetViewSet,AssignmentView,AnswerSheetPost
+from .views import ClassroomViewSet,ClassjoinView,AssignmentPost,AssignmentView,AnswerSheetPost,AnswerSheetView
 
 router = routers.DefaultRouter()
 router.register(r'classroom', ClassroomViewSet)
 
-router.register(r'answer',AnswerSheetViewSet)
 urlpatterns = [
-    
-    path('join',ClassjoinView.as_view()),
-    path('classroom/<int:pk>/assignment/',AssignmentPost.as_view()),
+    #post request with class_code to join a class, teacher cant join his own class
+    path('join',ClassjoinView.as_view()), 
+    #both teacher and student can see list of assignment of that class, only teacher can post an assignment
+    path('classroom/<int:pk>/assignment/',AssignmentPost.as_view()), 
+    #both teacher and student can see the details of a particular assignment
     path('classroom/<int:pk>/assignment/<int:id>/',AssignmentView.as_view()),
+    # student can post answer of a paticular assignment in class.
     path('classroom/<int:class_id>/assignment/<int:assignment_id>/answer/',AnswerSheetPost.as_view()),
+    path('classroom/<int:class_id>/assignment/<int:assignment_id>/answer/<int:answer_id>',AnswerSheetView.as_view())
 ]
-# urlpatterns = format_suffix_patterns(urlpatterns)
+
 urlpatterns += [path('', include(router.urls)),]

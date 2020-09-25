@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from datetime import timedelta,datetime
-from rest_framework import viewsets,status
+from rest_framework import viewsets,status,generics
 from django.core import serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
@@ -13,7 +13,11 @@ from rest_framework.response import Response
 from django.http import Http404
 import string
 import random
+
 def get_random_string(length):
+    """
+    Returns Random String of given length
+    """
     letters = string.ascii_lowercase
     result_str = ''.join(random.choice(letters) for i in range(length))
     return result_str
@@ -46,18 +50,18 @@ class ClassroomViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         permission_classes = []
         if self.action == 'create':
-            permission_classes = [IsAuthenticated]
+            permission_classes = [IsTeacher,IsAuthenticated]
         elif self.action == 'retrieve':
             permission_classes = [IsTeacherOrIsStudent]
         elif self.action == 'update' or self.action == 'partial_update' or self.action == 'destroy':
-            permission_classes = [IsTeacherOrIsStudent,IsAuthenticated]
+            permission_classes = [IsTeacher,IsAuthenticated]
         elif self.action == 'list' or self.action == 'destroy':
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
     
 
 class ClassjoinView(APIView):
-    permission_classes=[IsAuthenticated]
+    permission_classes=[IsAuthenticated,IsStudent]
     def post(self, request, format=None):
         class_code = request.data["class_code"]
         try:
@@ -66,47 +70,12 @@ class ClassjoinView(APIView):
             return Response({
                 "error" : "No such class.",
                 "user" : request.user.email
-            },status=status.HTTP_400_BAD_REQUEST
-            )
+            },status=status.HTTP_400_BAD_REQUEST)
         current_user =  UserProfile.objects.get(user=request.user)
-        if current_user == class_join.teacher:
-            return Response({'datail' : 'you do not have permission to perform this action.'})
         class_join.student.add(current_user)
         class_join.save()
-        return Response({'detail': f'{ request.user.email } {request.user.id} joined {class_join.id} succesfully'}, status=status.HTTP_201_CREATED)
+        return Response({'detail': f'{ request.user.email } joined {class_join.id} succesfully'}, status=status.HTTP_201_CREATED)
 
-
-
-class AnswerSheetViewSet(viewsets.ModelViewSet):
-    permission_classes = [AllowAny]
-    model = AnswerSheet
-    queryset = AnswerSheet.objects.all()
-    serializer_class = AnswerSheetSerializer
-    
-class AnswerSheetPost(APIView):
-    permission_classes = [IsAuthenticated]
-    def post(self,request,class_id,assignment_id,format=None):
-        try: 
-            classroom = Classroom.objects.get(pk=class_id)
-            assignment = Assignment.objects.get(pk=assignment_id)
-            user_profile = UserProfile.objects.get(user=request.user)
-        except:
-            raise Http404
-        if user_profile in classroom.student.all():
-            data = request.data
-            if assignment.submit_by:
-                if datetime.now() >= assignment.submit_by:
-                    data['late_submitted'] == True
-            data['student'] = user_profile.id
-            data['assignment'] = assignment.id
-            data['marks_scored'] = 0
-            serializer = AnswerSheetSerializer(data=data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
-             
 
 class AssignmentPost(APIView):
     permission_classes = [IsAuthenticated]
@@ -122,24 +91,23 @@ class AssignmentPost(APIView):
             return Response(serializer.data)
         else:
             return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
-
     def post(self, request, pk, format=None):
         user_profile = UserProfile.objects.get(user=request.user)
         try:
             classroom = Classroom.objects.get(pk=pk,teacher=user_profile)  
         except:
             raise Http404
-       
-        if user_profile == classroom.teacher:
-            data=request.data
-            data['classroom'] = classroom.id
-            serializer = AssignmentSerializer(data=data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+        # if user_profile == classroom.teacher:
+        data=request.data
+        data['classroom'] = classroom.id
+        serializer = AssignmentSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        # return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+
 
 class AssignmentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -150,9 +118,93 @@ class AssignmentView(APIView):
         except :
             raise Http404
         user_profile = UserProfile.objects.get(user=request.user)
-        print(classroom.id,assignment.id,user_profile.id,Classroom.teacher,user_profile in classroom.student.all())
         if user_profile == classroom.teacher or (user_profile in classroom.student.all()):
             serializer = AssignmentSerializer(assignment)
             return Response(serializer.data)
         else:
             return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+    def delete(self,request,pk,id,format=None):
+        try:
+            classroom = Classroom.objects.get(pk=pk)
+            assignment = Assignment.objects.get(classroom=classroom,pk=id)
+        except :
+            raise Http404
+        user_profile = UserProfile.objects.get(user=request.user)
+        if user_profile == classroom.teacher:
+            assignment.delete()
+            return Response(status=status.HTTP_200_OK)
+        else:
+            return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+        
+class AnswerSheetPost(APIView):
+    permission_classes = [IsAuthenticated,IsStudent]
+    def post(self,request,class_id,assignment_id,format=None):
+        try: 
+            classroom = Classroom.objects.get(pk=class_id)
+            assignment = Assignment.objects.get(pk=assignment_id)
+            user_profile = UserProfile.objects.get(user=request.user)
+        except:
+            raise Http404
+        if user_profile in classroom.student.all():
+            try:
+                AnswerSheet.objects.get(assignment=assignment,student=user_profile)
+            except:
+                data = request.data
+                if assignment.submit_by:
+                    if datetime.now() >= assignment.submit_by:
+                        data['late_submitted'] == True
+                data['student'] = user_profile.id
+                data['assignment'] = assignment.id
+                data['marks_scored'] = 0
+                data['checked'] = False
+                serializer = AnswerSheetSerializer(data=data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"deatils" : "Already submitted."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+            
+
+class AnswerSheetView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get_object(self, class_id,assignment_id,answer_id):
+        try:
+            
+            classroom = Classroom.objects.get(pk=class_id)
+            
+            assignment = Assignment.objects.get(classroom=classroom,pk=assignment_id)
+            
+            answer = AnswerSheet.objects.get(assignment=assignment,pk=answer_id)
+           
+            return answer
+        except :
+            raise Http404
+    
+    def get(self,request,class_id,assignment_id,answer_id,format=None):
+        user_profile = UserProfile.objects.get(user=request.user)
+        answer = self.get_object(class_id,assignment_id,answer_id)
+        if user_profile == answer.assignment.classroom.teacher or user_profile == answer.student :
+            serializer = AnswerSheetSerializer(answer)
+            return Response(serializer.data)
+        return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN) 
+    
+    def put(self,request,class_id,assignment_id,answer_id,format=None):
+        user_profile = UserProfile.objects.get(user=request.user)
+        answer = self.get_object(class_id,assignment_id,answer_id)
+        if  answer.checked == True:
+            return Response({'details' : "already checked."},status = status.HTTP_400_BAD_REQUEST)
+        if user_profile == answer.assignment.classroom.teacher:
+            data=request.data
+            try: 
+                marks = data['marks_scored']
+            except:
+                return Response({"details" : "marks_scored field is required."}, status=status.HTTP_400_BAD_REQUEST)
+            if marks <= answer.assignment.max_marks:
+                answer.marks_scored = marks
+                answer.checked = True
+                answer.save()
+                serializer = AnswerSheetSerializer(answer)
+                return Response(serializer.data,status=status.HTTP_200_OK)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)  
