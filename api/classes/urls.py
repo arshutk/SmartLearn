@@ -4,7 +4,7 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from django.conf.urls.static import static
 from django.urls import path
 from rest_framework import routers
-from .views import ClassroomViewSet,ClassjoinView,AssignmentPost,AssignmentView,AnswerSheetPost,AnswerSheetView
+from .views import ClassroomViewSet,ClassjoinView,AssignmentPost,AssignmentView,AnswerSheetPost,AnswerSheetView,ListOfAnswers
 
 router = routers.DefaultRouter()
 router.register(r'classroom', ClassroomViewSet)
@@ -18,7 +18,8 @@ urlpatterns = [
     path('classroom/<int:pk>/assignment/<int:id>/',AssignmentView.as_view()),
     # student can post answer of a paticular assignment in class.
     path('classroom/<int:class_id>/assignment/<int:assignment_id>/answer/',AnswerSheetPost.as_view()),
-    path('classroom/<int:class_id>/assignment/<int:assignment_id>/answer/<int:answer_id>',AnswerSheetView.as_view())
+    path('classroom/<int:class_id>/assignment/<int:assignment_id>/answer/<int:answer_id>',AnswerSheetView.as_view()),
+    path('classroom/<int:class_id>/assignment/<int:assignment_id>/answers/',ListOfAnswers.as_view())
 ]
 
 urlpatterns += [path('', include(router.urls)),]
