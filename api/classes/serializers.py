@@ -5,6 +5,8 @@ from rest_framework_jwt.settings import api_settings
 
 
 class ClassroomSerializer(serializers.ModelSerializer):    
+    teacher = serializers.HyperlinkedRelatedField(view_name='profile', read_only=True)
+    student = serializers.HyperlinkedRelatedField(many=True,view_name='profile',read_only=True)
     class Meta:
         model = Classroom
         fields =('__all__')

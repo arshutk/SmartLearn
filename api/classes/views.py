@@ -13,6 +13,19 @@ from rest_framework.response import Response
 from django.http import Http404
 import string
 import random
+from userauth.serializers import UserProfileSerializer
+
+class UserProfileView(APIView):
+    permission_classes=[IsAuthenticated]
+    def get_object(self,pk):
+        try:
+            return UserProfile.objects.get(pk=pk)
+        except:
+            raise Http404
+    def get(self,request,pk,format=None):
+        user_profile = self.get_object(pk)
+        serializer = UserProfileSerializer(user_profile)
+        return Response(serializer.data,status=status.HTTP_200_OK)
 
 def get_random_string(length):
     """
@@ -27,15 +40,12 @@ class ClassroomViewSet(viewsets.ModelViewSet):
     queryset = Classroom.objects.all()
     serializer_class = ClassroomSerializer
     def get_queryset(self):
-        user = self.request.user
-        user_profile = UserProfile.objects.get(user=user)
-        queryset1 = Classroom.objects.filter(teacher=user_profile)
-        queryset2 =  Classroom.objects.filter(student=user_profile)
+        queryset1 = Classroom.objects.filter(teacher=self.request.user.profile)
+        queryset2 =  Classroom.objects.filter(student=self.request.user.profile)
         return queryset2 | queryset1
     def create(self, request):
         data = request.data
-        user = request.user
-        teacher = UserProfile.objects.get(user=user).pk
+        teacher = request.user.profile.id
         random_code = get_random_string(6)
         while(Classroom.objects.filter(class_code=random_code)) :
             random_code = get_random_string(6)
@@ -71,7 +81,7 @@ class ClassjoinView(APIView):
                 "error" : "No such class.",
                 "user" : request.user.email
             },status=status.HTTP_400_BAD_REQUEST)
-        current_user =  UserProfile.objects.get(user=request.user)
+        current_user =  request.user.profile
         class_join.student.add(current_user)
         class_join.save()
         return Response({'detail': f'{ request.user.email } joined {class_join.id} succesfully'}, status=status.HTTP_201_CREATED)
@@ -85,7 +95,7 @@ class AssignmentPost(APIView):
         except :
             raise Http404
     def get(self, request, pk, format=None):
-        user_profile = UserProfile.objects.get(user=request.user)
+        user_profile = request.user.profile
         classroom = self.get_object(pk)
         if user_profile == classroom.teacher or (user_profile in classroom.student.all()):
             assignment = Assignment.objects.filter(classroom=classroom)
@@ -94,11 +104,16 @@ class AssignmentPost(APIView):
         else:
             return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
     def post(self, request, pk, format=None):
-        user_profile = UserProfile.objects.get(user=request.user)
+        user_profile = request.user.profile
         classroom = self.get_object(pk)
         if user_profile == classroom.teacher:
             data=request.data
             data['classroom'] = classroom.id
+            try:
+               if data['submit_by'] <= datetime.now() + timedelta(minutes=2):
+                   return Response({"details" : "submit_by can not be smaller than current time + 2 minutes."})
+            except:
+                pass
             serializer = AssignmentSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
@@ -121,7 +136,7 @@ class AssignmentView(APIView):
     def get(self,request,pk,id,format=None):
         classroom = self.get_object(pk,id)
         assignment = Assignment.objects.get(classroom=classroom,pk=id)
-        user_profile = UserProfile.objects.get(user=request.user)
+        user_profile = request.user.profile
         if user_profile == classroom.teacher or (user_profile in classroom.student.all()):
             serializer = AssignmentSerializer(assignment)
             return Response(serializer.data)
@@ -131,7 +146,7 @@ class AssignmentView(APIView):
     def delete(self,request,pk,id,format=None):
         classroom = self.get_object(pk,id)
         assignment = Assignment.objects.get(classroom=classroom,pk=id)
-        user_profile = UserProfile.objects.get(user=request.user)
+        user_profile = request.user.profile
         if user_profile == classroom.teacher:
             assignment.delete()
             return Response(status=status.HTTP_200_OK)
@@ -144,7 +159,7 @@ class AnswerSheetPost(APIView):
         try: 
             classroom = Classroom.objects.get(pk=class_id)
             assignment = Assignment.objects.get(pk=assignment_id)
-            user_profile = UserProfile.objects.get(user=request.user)
+            user_profile = request.user.profile
         except:
             raise Http404
         if user_profile in classroom.student.all():
@@ -184,7 +199,7 @@ class AnswerSheetView(APIView):
             raise Http404
     
     def get(self,request,class_id,assignment_id,answer_id,format=None):
-        user_profile = UserProfile.objects.get(user=request.user)
+        user_profile = request.user.profile
         answer = self.get_object(class_id,assignment_id,answer_id)
         if user_profile == answer.assignment.classroom.teacher or user_profile == answer.student :
             serializer = AnswerSheetSerializer(answer)
@@ -192,7 +207,7 @@ class AnswerSheetView(APIView):
         return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN) 
     
     def put(self,request,class_id,assignment_id,answer_id,format=None):
-        user_profile = UserProfile.objects.get(user=request.user)
+        user_profile = request.user.profile
         answer = self.get_object(class_id,assignment_id,answer_id)
         if  answer.checked == True:
             return Response({'details' : "already checked."},status = status.HTTP_400_BAD_REQUEST)
@@ -222,7 +237,7 @@ class ListOfAnswers(APIView):
         except:
             raise Http404
     def get(self,request,class_id,assignment_id,format=None):
-        user_profile = UserProfile.objects.get(user=request.user)
+        user_profile = request.user.profile
         assignment = self.get_object(class_id, assignment_id)
         if user_profile == assignment.classroom.teacher:
             answers = AnswerSheet.objects.filter(assignment=assignment)

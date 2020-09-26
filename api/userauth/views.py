@@ -5,8 +5,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from .permissions import IsLoggedInUserOrAdmin, IsAdminUser
 
-from .models import User, OtpModel
-from .serializers import UserSerializer
+from .models import User, OtpModel,UserProfile
+from .serializers import UserSerializer,UserProfileSerializer
 
 from django.http import Http404
 
