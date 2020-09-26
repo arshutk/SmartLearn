@@ -22,7 +22,7 @@ class UserProfile(models.Model):
     picture      = models.ImageField(upload_to = 'images/', blank = True, null = True, max_length = 1500)
      
     def __str__(self):
-        return self.name
+        return self.user.email
         
 
 class OtpModel(models.Model):

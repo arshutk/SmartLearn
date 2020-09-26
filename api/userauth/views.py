@@ -97,7 +97,7 @@ class OtpCreation(APIView):
                     otp = randint(100000, 999999) 
                     time_of_creation = int(time.time())
                     OtpModel.objects.create(otp = otp, otp_email = user_email, time_created = time_of_creation)
-                    mail_body = f"Hello Your OTP for registration is {otp}. This OTP will be valid for 5 minutes"
+                    mail_body = f"Hello Your OTP for registration is {otp}. This OTP will be valid for 5 minutes."
                     send_mail('OTP for registering on SmartLearn', mail_body, 'nidhi.smartlearn@gmail.com', [user_email], fail_silently = False) 
                     return Response(status = status.HTTP_200_OK)
         else:

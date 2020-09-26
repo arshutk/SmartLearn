@@ -8,8 +8,8 @@ class Classroom(models.Model):
   
     description = models.TextField(max_length=300,blank=True)
    
-    teacher = models.ForeignKey(UserProfile, on_delete=models.CASCADE,verbose_name="Teacher",related_name ='Teacher')
-    student = models.ManyToManyField(UserProfile,verbose_name="Student",related_name ='Student',blank=True)
+    teacher = models.ForeignKey(UserProfile, on_delete=models.CASCADE,verbose_name="Teacher",related_name ='teacher')
+    student = models.ManyToManyField(UserProfile,verbose_name="Student",related_name ='student',blank=True)
     
     def __str__(self):
         return f'{self.class_code} : {self.subject_name} : {self.teacher}'
@@ -30,15 +30,7 @@ class DoubtSection(models.Model):
     def __str__(self):
         return f'{self.user} : {str(self.doubt_text)[:50]}'
 
-# {
-#     "doubt_text":"helpppp...!",
-#     "classroom": {
-#         "id":"1"
-#     },
-#     "user": {
-#         "id":"1"
-#     }
-# }
+
 # {
 #     "doubt_text":"helpppp...!",
 #     "classroom": "1",
@@ -52,3 +44,37 @@ class DoubtSection(models.Model):
 #     "classroom": 1,
 #     "user": 2
 # }
+
+# >>> from classes.models import DoubtSection
+# >>> query = DoubtSection.objects
+# >>> query.all()
+# <QuerySet [<DoubtSection: Anon : Plizz Help...!>, <DoubtSection: Teacher : Plizz Help...!>, <DoubtSection: Student : Plizz Help...!>]>
+# >>> query.filter(classroom=1) 
+# <QuerySet [<DoubtSection: Anon : Plizz Help...!>, <DoubtSection: Teacher : Plizz Help...!>, <DoubtSection: Student : Plizz Help...!>]>
+# >>> query.filter(classroom=2) 
+# <QuerySet []>
+# >>> query.doubt_text         
+# Traceback (most recent call last):
+#   File "<console>", line 1, in <module>
+# AttributeError: 'Manager' object has no attribute 'doubt_text'
+# >>> query.all().doubt_text 
+# Traceback (most recent call last):
+#   File "<console>", line 1, in <module>
+# AttributeError: 'QuerySet' object has no attribute 'doubt_text'
+# >>> query.get(id=1).doubt_text 
+# 'Plizz Help...!'
+# >>> query.filter(id=1)        
+# <QuerySet [<DoubtSection: Anon : Plizz Help...!>]>
+# >>> query.get(id=1)
+# <DoubtSection: Anon : Plizz Help...!>
+# >>> query.get(id=1).classroom
+# <Classroom: qwerty : KAS : Teacher>
+# >>> query.get(id=1).classroom.teacher
+# <UserProfile: Teacher>
+# >>> query.get(id=1).classroom.teacher.name
+# 'Teacher'
+# >>> query.get(id=1).classroom.student
+# <django.db.models.fields.related_descriptors.create_forward_many_to_many_manager.<locals>.ManyRelatedManager object at 0x04A5F730>
+# >>> query.get(id=1).classroom.student.all()
+# <QuerySet [<UserProfile: Student>]>
+# >>> query.get(id=1).classroom.student.all()
