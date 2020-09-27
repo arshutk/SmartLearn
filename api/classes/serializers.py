@@ -2,15 +2,18 @@ from rest_framework import serializers
 from .models import Classroom,Assignment,AnswerSheet
 from django.contrib.auth import authenticate
 from rest_framework_jwt.settings import api_settings
-
+from userauth.serializers import UserProfileSerializer
 
 class ClassroomSerializer(serializers.ModelSerializer):    
-    teacher = serializers.HyperlinkedRelatedField(view_name='profile', read_only=True)
-    student = serializers.HyperlinkedRelatedField(many=True,view_name='profile',read_only=True)
     class Meta:
         model = Classroom
         fields =('__all__')
         #fields = ('class_code','subject_name','subject_code','description','standard','branch','section')
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        response['teacher'] = UserProfileSerializer(instance.teacher).data
+        response['student'] = UserProfileSerializer(instance.student,many=True).data
+        return response
 
 class AnswerSheetSerializer(serializers.ModelSerializer):    
     class Meta:

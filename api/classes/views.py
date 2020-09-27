@@ -14,7 +14,7 @@ from django.http import Http404
 import string
 import random
 from userauth.serializers import UserProfileSerializer
-
+from django.forms.models import model_to_dict
 class UserProfileView(APIView):
     permission_classes=[IsAuthenticated]
     def get_object(self,pk):
@@ -84,7 +84,7 @@ class ClassjoinView(APIView):
         current_user =  request.user.profile
         class_join.student.add(current_user)
         class_join.save()
-        return Response({'detail': f'{ request.user.email } joined {class_join.id} succesfully'}, status=status.HTTP_201_CREATED)
+        return Response({'class_id': class_join.id }, status=status.HTTP_201_CREATED)
 
 
 class AssignmentPost(APIView):
@@ -182,7 +182,6 @@ class AnswerSheetPost(APIView):
             return Response({"deatils" : "Already submitted."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
             
-
 class AnswerSheetView(APIView):
     permission_classes = [IsAuthenticated]
     def get_object(self, class_id,assignment_id,answer_id):
@@ -244,4 +243,3 @@ class ListOfAnswers(APIView):
             serializer = AnswerSheetSerializer(answers,many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"details" : "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
-
