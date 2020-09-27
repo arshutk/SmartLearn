@@ -6,7 +6,7 @@ from rest_framework_jwt.settings import api_settings
 class UserProfileSerializer(serializers.ModelSerializer):    
     class Meta:
         model = UserProfile
-        fields = ('name', 'picture','is_teacher')
+        fields = ('id','name', 'picture','is_teacher')
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     profile = UserProfileSerializer(required=True)
