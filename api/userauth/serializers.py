@@ -2,6 +2,7 @@ from rest_framework import serializers
 from userauth.models import User, UserProfile
 from django.contrib.auth import authenticate
 from rest_framework_jwt.settings import api_settings
+from django.contrib.auth.password_validation import validate_password
 
 class UserProfileSerializer(serializers.ModelSerializer):    
     class Meta:
@@ -34,6 +35,4 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         profile.name = profile_data.get('name', profile.name)
         profile.picture = profile_data.get('picture', profile.picture)
         profile.save()
-
-        return instance
-
+    
