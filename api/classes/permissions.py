@@ -4,33 +4,21 @@ from userauth.models import UserProfile
 class IsTeacher(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         user = UserProfile.objects.get(user=request.user)
+        print(user,obj.teacher,user==obj.teacher)
         return user == obj.teacher
+    def has_permission(self,request,view):
+        user = UserProfile.objects.get(user=request.user)
+        return user.is_teacher
 
-class IsStudent(permissions.BasePermission):
-    
+class IsTeacherOrIsStudent(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         user = UserProfile.objects.get(user=request.user)
-        return user in obj.student.all()
+        return user in obj.student.all() or user==obj.teacher
 
-class IsClassroomMember(permissions.BasePermission):
-    pass
-    
-#     def has_permission(self,request,view):
-#         poster = request.user.id
-#         data = request.data
-#         classroom = data['classroom']
-#         # teacher_name = Classroom.objects.get(id = classroom).teacher
-#         # teacher_email = UserProfile.objects.filter(name = teacher_name)[0]
-#         # student = Classroom.objects.get(id = classroom).student.all()
-#         poster_ = UserProfile.objects.get(id = poster)
-
-#         print(poster.id)
-#         print(data)
-#         print(student)
-#         print(teacher_name) 
-#         print(teacher_email) 
-#         # print(poster == teacher)
-#         print(list(student))
-#         print(poster in list(student))
-
-        
+class IsStudent(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        user = UserProfile.objects.get(user=request.user)
+        return user in obj.student.all() and (not user.is_teacher)
+    def has_permission(self,request,view):
+        user = UserProfile.objects.get(user=request.user)
+        return not user.is_teacher

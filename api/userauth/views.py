@@ -8,6 +8,7 @@ from .permissions import IsLoggedInUserOrAdmin, IsAdminUser
 from .models import User, OtpModel, UserProfile
 from .serializers import UserSerializer
 
+
 from django.http import Http404
 
 from random import randint
@@ -119,6 +120,7 @@ class OTPVerificationView(APIView):
             user.save()
             
             OtpModel.objects.filter(otp_email__iexact = request_email).delete()
+
 
             return Response(status = status.HTTP_201_CREATED)
         

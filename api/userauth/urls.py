@@ -11,14 +11,11 @@ router.register(r'users', UserViewSet)
 
 urlpatterns = [
     url(r'^', include(router.urls)),
-
     path('login/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('login/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
-
     path('verify/', OTPVerificationView.as_view()),
-
     path('password/reset', PasswordResetView.as_view()),
     path('password/reset/verify', PasswordResetOTPConfirmView.as_view()),
-    
+    path('class/',include('classes.urls')),
 ] 
 
