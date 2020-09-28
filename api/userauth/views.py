@@ -100,15 +100,18 @@ class OTPVerificationView(APIView):
 
         request_otp   = coming_data.get("otp","")
         request_email = coming_data.get("email","")
-        # request_is_teacher = coming_data.get("is_teacher","")
+        request_is_teacher = coming_data.get("is_teacher","")
+        print(request_is_teacher)
         current_time = int(time.time())
 
         try:
-            query        = OtpModel.objects.filter(otp_email__iexact = request_email)[0]
+            query        = OtpModel.objects.get(otp_email__iexact = request_email)
+            # print(query)
         except:
             raise Http404
 
         otpmodel_email      = query.otp_email 
+        # print(otpmodel_email)
         otpmodel_otp        = query.otp
         otp_creation_time   = query.time_created
 
@@ -116,8 +119,14 @@ class OTPVerificationView(APIView):
         if request_email == otpmodel_email and request_otp == otpmodel_otp and (current_time - otp_creation_time < 300):
 
             user  =  User.objects.get(email__iexact = request_email)
-            user.is_active =True
+            user.is_active = True
             user.save()
+            print(UserProfile.objects.get(user = user).is_teacher)
+
+            user_profile = UserProfile.objects.get(user = user)
+            user_profile.is_teacher = request_is_teacher
+            user_profile.save()
+            
             
             OtpModel.objects.filter(otp_email__iexact = request_email).delete()
 
@@ -135,7 +144,16 @@ class PasswordResetView(APIView):
 
     def post(self, request):
         request_email = request.data.get("email","")
-        if request_email:
+        print(request_email)
+        try:
+            OtpModel.objects.get(otp_email__iexact = request_email)
+            print("caca")
+        except: 
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+        user_active_status = User.objects.get(email__iexact = request_email).is_active
+
+        if request_email and user_active_status:
             try:
                 user = User.objects.get(email__iexact = request_email)
             except:
@@ -154,10 +172,8 @@ class PasswordResetOTPConfirmView(APIView):
 
     def post(self,request):
         coming_data = request.data
-        print(coming_data)
         request_otp   = coming_data.get("otp","")
         request_email = coming_data.get("email","")
-        print(request_email)
         if request_email:
             try:
                 otpmodel = OtpModel.objects.get(otp_email__iexact = request_email)
@@ -165,19 +181,14 @@ class PasswordResetOTPConfirmView(APIView):
                 user = User.objects.get(email__iexact = request_email)
                 print(user)
             except:
-                print("heretooo404")
                 raise Http404
                 
 
             
             if otpmodel.otp_email == request_email and otpmodel.otp == request_otp:
-                # data = {"id" : User.objects.get(email__iexact = request_email).id}
-                print("now here")
                 OtpModel.objects.filter(otp_email__iexact = request_email).delete()
                 return Response(get_tokens_for_user(user))
-            # return Response(data, status = status.HTTP_400_BAD_REQUEST)
             return Response(status = status.HTTP_400_BAD_REQUEST)
-        print("Hello")
         return Response(status = status.HTTP_400_BAD_REQUEST)
             
 
