@@ -35,4 +35,3 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         profile.name = profile_data.get('name', profile.name)
         profile.picture = profile_data.get('picture', profile.picture)
         profile.save()
-    
