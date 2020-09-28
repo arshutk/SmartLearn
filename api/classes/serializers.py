@@ -9,12 +9,12 @@ from userauth.models import UserProfile
 class ClassroomSerializer(serializers.ModelSerializer):    
     class Meta:
         model = Classroom
-        fields =('__all__')
-        #fields = ('class_code','subject_name','subject_code','description','standard','branch','section')
+        fields = ('id','class_code','subject_name','description','teacher','student')
+        write_only_fields = ('student',)
     def to_representation(self, instance):
         response = super().to_representation(instance)
         response['teacher'] = UserProfileSerializer(instance.teacher).data
-        response['student'] = UserProfileSerializer(instance.student,many=True).data
+       # response['student'] = UserProfileSerializer(instance.student,many=True).data
         return response
 
 class AnswerSheetSerializer(serializers.ModelSerializer):    

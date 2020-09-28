@@ -12,6 +12,7 @@ class Classroom(models.Model):
         return f'{self.class_code} -> {self.subject_name} -> {self.teacher}'
 
 class Assignment(models.Model):
+    
     title = models.CharField(max_length=50, blank=False)
     description = models.TextField(blank=True)
     time_created = models.DateTimeField(auto_now=True)
@@ -24,6 +25,7 @@ class Assignment(models.Model):
 
         
 class AnswerSheet(models.Model):
+    
     file_linked = models.FileField(upload_to="class/answers", blank=True, max_length= 1500000)
     marks_scored = models.DecimalField(max_digits=5,decimal_places=1,default=0)
     late_submitted = models.BooleanField(default=False)
@@ -35,7 +37,7 @@ class AnswerSheet(models.Model):
 
 
 class DoubtSection(models.Model):
-
+    
     time_created = models.DateTimeField(auto_now_add = True)
     doubt_text = models.TextField(max_length = 300)
     file = models.FileField(upload_to = 'doubt-pdf/', blank = True, null = True, max_length = 1500)
