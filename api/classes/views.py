@@ -8,8 +8,8 @@ from rest_framework.permissions import AllowAny,IsAuthenticated
 from userauth.models import UserProfile,User
 from .models import Classroom,AnswerSheet,Assignment,DoubtSection
 from .permissions import IsStudent,IsTeacher,IsTeacherOrIsStudent
-from .serializers import ClassroomSerializer,AnswerSheetSerializer,AssignmentSerializer, DoubtSectionSerializer
 
+from .serializers import ClassroomSerializer,AnswerSheetSerializer,AssignmentSerializer, DoubtSectionSerializer,StudentPortalSerializer
 from userauth.permissions import IsLoggedInUserOrAdmin, IsAdminUser
 from rest_framework.response import Response
 from django.http import Http404
@@ -32,10 +32,9 @@ class ClassroomViewSet(viewsets.ModelViewSet):
     serializer_class = ClassroomSerializer
 
     def get_queryset(self):
-        queryset1 = Classroom.objects.filter(teacher=self.request.user.profile)
-        queryset2 =  Classroom.objects.filter(student=self.request.user.profile)
-        return queryset2 | queryset1
-
+        if self.request.user.profile.is_teacher == True:
+            return Classroom.objects.filter(teacher=self.request.user.profile)
+        return  Classroom.objects.filter(student=self.request.user.profile)
     def create(self, request):
         data = request.data
         teacher = request.user.profile.id
@@ -288,4 +287,42 @@ class ListOfAnswers(APIView):
             serializer = AnswerSheetSerializer(answers,many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response({"details" : "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+class PortalView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get_class(self,class_id):
+        try: 
+            return Classroom.objects.get(id=class_id)
+        except:
+            raise Http404
+    def get_student(self,student_id):
+        try: 
+            return UserProfile.objects.get(is_teacher=False,id=student_id)
+        except: 
+            raise Http404
+    def get(self,request,class_id,student_id,format=None):
+        classroom = self.get_class(class_id)
+        student = self.get_student(student_id)
+        if request.user.profile == classroom.teacher or request.user.profile == student:
+            assignments = classroom.assignment.all()
+            answersheets = set()
+            max_marks = 0
+            marks =0
+            no_of_answer = 0
+            total_assignment = assignments.count()
+            for assignment in assignments:
+                max_marks += assignment.max_marks
+                try:
+                    answer = AnswerSheet.objects.get(student=student,assignment=assignment)
+                    marks += answer.marks_scored
+                    no_of_answer += 1
+                except:
+                    pass
+            if max_marks!=0:
+                percentage = 100*(marks/max_marks)
+            else:
+                percentage = 100
+            portal =Portal(student=student.id,percentage=percentage,no_of_assignments=total_assignment,no_of_answers=no_of_answer)
+            serializer = StudentPortalSerializer(portal)
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        return Response({'details' : "You do not have permission to perform this action."},status=status.HTTP_403_FORBIDDEN)
 
