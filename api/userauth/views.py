@@ -6,7 +6,7 @@ from rest_framework.permissions import AllowAny
 from .permissions import IsLoggedInUserOrAdmin, IsAdminUser
 
 from .models import User, OtpModel, UserProfile
-from .serializers import UserSerializer
+from .serializers import UserSerializer,MyTokenObtainPairSerializer
 
 
 from django.http import Http404
@@ -17,6 +17,10 @@ from django.core.mail import send_mail
 from rest_framework_simplejwt.tokens import RefreshToken
 
 import time
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
 
 
 # /////////////////////////////
@@ -55,8 +59,8 @@ class UserViewSet(viewsets.ModelViewSet):
                     otp = randint(100000, 999999) 
                     time_of_creation = int(time.time())
                     OtpModel.objects.create(otp = otp, otp_email = request_email, time_created = time_of_creation)
-                    # mail_body = f"Hello Your OTP for registration is {otp}. This OTP will be valid for 5 minutes."
-                    # send_mail('OTP for registering on SmartLearn', mail_body, 'nidhi.smartlearn@gmail.com', [request_email], fail_silently = False) 
+                    mail_body = f"Hello Your OTP for registration is {otp}. This OTP will be valid for 5 minutes."
+                    send_mail('OTP for registering on SmartLearn', mail_body, 'nidhi.smartlearn@gmail.com', [request_email], fail_silently = False) 
                     serializer = UserSerializer(data = coming_data)
                     if serializer.is_valid():
                         serializer.save()

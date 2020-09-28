@@ -3,6 +3,21 @@ from userauth.models import User, UserProfile
 from django.contrib.auth import authenticate
 from rest_framework_jwt.settings import api_settings
 from django.contrib.auth.password_validation import validate_password
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super(MyTokenObtainPairSerializer, self).validate(attrs)
+        data.update({'email': self.user.email})
+        data.update({'name' : self.user.profile.name})
+        try:
+            data.update({'profile_pic': self.user.profile.picture.url})
+        except:
+            data.update({'profile_pic': None})
+        data.update({'is_teacher': self.user.profile.is_teacher})
+        return data
+
+
 
 class UserProfileSerializer(serializers.ModelSerializer):    
     class Meta:
