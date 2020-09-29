@@ -42,7 +42,7 @@ class DoubtSection(models.Model):
     doubt_text = models.TextField(max_length = 300)
     file = models.FileField(upload_to = 'doubt-pdf/', blank = True, null = True, max_length = 1500)
 
-    classroom = models.ForeignKey(Classroom, on_delete = models.CASCADE, verbose_name = "Classroom", related_name = "classroom")
+    classroom = models.ForeignKey(Classroom, on_delete = models.CASCADE, verbose_name = "Classroom", related_name = "doubt")
     user      = models.ForeignKey(UserProfile, on_delete=models.CASCADE,  verbose_name = "UserProfile", related_name = "userprofile")
 
     def __str__(self):

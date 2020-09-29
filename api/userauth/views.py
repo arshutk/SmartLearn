@@ -135,7 +135,7 @@ class OTPVerificationView(APIView):
             OtpModel.objects.filter(otp_email__iexact = request_email).delete()
 
 
-            return Response(status = status.HTTP_201_CREATED)
+            return Response(status = status.HTTP_202_ACCEPTED)
         
         else:
             return Response(status = status.HTTP_400_BAD_REQUEST)
@@ -149,11 +149,11 @@ class PasswordResetView(APIView):
     def post(self, request):
         request_email = request.data.get("email","")
         print(request_email)
-        try:
-            OtpModel.objects.get(otp_email__iexact = request_email)
-            print("caca")
-        except: 
-            return Response(status = status.HTTP_400_BAD_REQUEST)
+        # try:
+        #     OtpModel.objects.get(otp_email__iexact = request_email)
+        #     print("caca")
+        # except: 
+        #     return Response(status = status.HTTP_400_BAD_REQUEST)
 
         user_active_status = User.objects.get(email__iexact = request_email).is_active
 
@@ -196,3 +196,23 @@ class PasswordResetOTPConfirmView(APIView):
         return Response(status = status.HTTP_400_BAD_REQUEST)
             
 
+
+class OTPResend(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        coming_data = request.data
+        request_email = coming_data.get("request_email","")
+        try:
+            User.objects.get(email__iexact = request_email)
+        except:
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+
+        OtpModel.objects.filter(otp_email__iexact = request_email).delete()
+
+        if request_email:
+            otp = randint(100000, 999999) 
+            time_of_creation = int(time.time())
+            OtpModel.objects.create(otp = otp, otp_email = request_email, time_created = time_of_creation)
+            # mail_body = f"Hello Your OTP for registration is {otp}. This OTP will be valid for 5 minutes."
+            # send_mail('OTP for registering on SmartLearn', mail_body, 'nidhi.smartlearn@gmail.com', [request_email], fail_silently = False) 

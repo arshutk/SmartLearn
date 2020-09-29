@@ -4,11 +4,11 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from django.conf.urls.static import static
 from django.urls import path
 from rest_framework import routers
-from .views import ClassroomViewSet,PortalView,DoubtSectionViewSet,ClassjoinView,AssignmentPost,AssignmentView,AnswerSheetPost,AnswerSheetView,ListOfAnswers
+from .views import ClassroomViewSet,PortalView,ClassjoinView,AssignmentPost,AssignmentView,AnswerSheetPost,AnswerSheetView,ListOfAnswers, DoubtSectionView
 
 router = routers.DefaultRouter()
 router.register(r'classroom', ClassroomViewSet)
-router.register(r'doubt', DoubtSectionViewSet)
+# router.register(r'doubt', DoubtSectionViewSet)
 
 urlpatterns = [
     #post request with class_code to join a class, teacher cant join his own class
@@ -21,6 +21,9 @@ urlpatterns = [
     path('classroom/<int:class_id>/assignment/<int:assignment_id>/answer/',AnswerSheetPost.as_view()),
     path('classroom/<int:class_id>/assignment/<int:assignment_id>/answer/<int:answer_id>/',AnswerSheetView.as_view()),
     path('classroom/<int:class_id>/assignment/<int:assignment_id>/answers/',ListOfAnswers.as_view()),
+    # Doubt Section
+    path('classroom/<int:class_id>/doubt/',DoubtSectionView.as_view()),
+    # Portal
     path('classroom/<int:class_id>/portal/<int:student_id>/',PortalView.as_view())
 ]
 

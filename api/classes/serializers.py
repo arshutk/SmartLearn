@@ -33,6 +33,11 @@ class DoubtSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoubtSection
         fields =('__all__')
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        response['user'] = UserProfileSerializer(instance.user).data
+        response['classroom'] = ClassroomSerializer(instance.classroom).data
+        return response
 
 class Portal:
     def __init__(self, student, percentage, no_of_assignments,no_of_answers):

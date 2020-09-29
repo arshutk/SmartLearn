@@ -2,7 +2,7 @@ from django.conf.urls import url
 from django.urls import path,include
 
 from rest_framework import routers
-from userauth.views import UserViewSet, OTPVerificationView, PasswordResetView, PasswordResetOTPConfirmView,MyTokenObtainPairView
+from userauth.views import UserViewSet, OTPVerificationView, PasswordResetView, PasswordResetOTPConfirmView,MyTokenObtainPairView, OTPResend
 
 from rest_framework_simplejwt import views as jwt_views
 
@@ -16,6 +16,7 @@ urlpatterns = [
     path('verify/', OTPVerificationView.as_view()),
     path('password/reset', PasswordResetView.as_view()),
     path('password/reset/verify', PasswordResetOTPConfirmView.as_view()),
+    path('otp/resend', OTPResend.as_view()),
     path('class/',include('classes.urls')),
 ] 
 
