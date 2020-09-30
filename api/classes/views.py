@@ -18,6 +18,8 @@ import random
 from userauth.serializers import UserProfileSerializer
 from django.forms.models import model_to_dict
 
+from django.http import JsonResponse
+
 def get_random_string(length):
     """
     Returns Random String of given length
@@ -282,7 +284,7 @@ class DoubtSectionView(APIView):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class PortalView(APIView):
+class PortalStudentView(APIView):
     permission_classes = [IsAuthenticated]
     def get_class(self,class_id):
         try: 
@@ -301,7 +303,7 @@ class PortalView(APIView):
             assignments = classroom.assignment.all()
             answersheets = set()
             max_marks = 0
-            marks =0
+            marks = 0
             no_of_answer = 0
             total_assignment = assignments.count()
             for assignment in assignments:
@@ -312,12 +314,57 @@ class PortalView(APIView):
                     no_of_answer += 1
                 except:
                     pass
-            if max_marks!=0:
+            if max_marks!= 0:
                 percentage = 100*(marks/max_marks)
             else:
                 percentage = 100
-            portal =Portal(student=student.id,percentage=percentage,no_of_assignments=total_assignment,no_of_answers=no_of_answer)
+            portal = Portal(student=student.id,percentage=percentage,no_of_assignments=total_assignment,no_of_answers=no_of_answer)
             serializer = StudentPortalSerializer(portal)
             return Response(serializer.data,status=status.HTTP_200_OK)
         return Response({'details' : "You do not have permission to perform this action."},status=status.HTTP_403_FORBIDDEN)
 
+
+class PortalTeacherView(APIView):
+    permission_classes = [IsAuthenticated]
+    data = dict()
+    def get(self, request, class_id):
+        try: 
+            classroom =  Classroom.objects.get(id=class_id)
+        except:
+            raise Http404
+        students = classroom.student.all()
+        if request.user.email == classroom.teacher.user.email:
+            student_count = 1
+            for student in students:
+                student_record = dict()
+                total_marks = 0
+                total_marks_scored = 0
+                assignment_count = 1
+                for assignment in classroom.assignment.all():
+                    assignment_record = dict()
+                    assignment_title = assignment.title
+                    assignment_marks  = float(assignment.max_marks) 
+                    student_profile = User.objects.get(email__iexact = student.user.email).profile
+                    try:
+                        marks_scored = float(assignment.answersheet.all().get(student = student_profile).marks_scored)
+                    except:
+                        # marks_scored = 0.0
+                        continue
+                    percentage = (marks_scored/assignment_marks) * 100
+                    total_marks += assignment_marks
+                    total_marks_scored += marks_scored
+                    serializer = UserProfileSerializer(student_profile)
+                    assignment_record["assignment_title"]  = assignment_title
+                    assignment_record["total_marks"]  = assignment_marks
+                    assignment_record["marks_scored"]  = marks_scored
+                    assignment_record["percentage"]  = percentage
+                    student_record["student"] = serializer.data
+                    student_record[f"Assignment-{assignment_count}"] = assignment_record
+                    assignment_count += 1
+                    
+                overall_percentage = (total_marks_scored/total_marks)*100
+                student_record["overall_percentage"] = overall_percentage
+                self.data[f"student-{student_count}"] = student_record
+                student_count += 1
+                
+        return JsonResponse(self.data)

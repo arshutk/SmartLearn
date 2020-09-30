@@ -76,9 +76,10 @@ class UserViewSet(viewsets.ModelViewSet):
             new_password = request.data.get('password', "")
             if new_password:
                 user = User.objects.get(pk = pk)
+                print(user)
                 user.set_password(new_password)
                 user.save()
-                return Response(status = status.HTTP_202_ACCEPTED)
+                return Response({'id': user.id} ,status = status.HTTP_202_ACCEPTED)
             return Response(status = status.HTTP_400_BAD_REQUEST)
         return Response(status = status.HTTP_401_UNAUTHORIZED)
 
