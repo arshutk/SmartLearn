@@ -1,14 +1,14 @@
 from django.shortcuts import render
 from datetime import timedelta,datetime
-from rest_framework import viewsets,status,generics
+from rest_framework import viewsets,status,generics,mixins
 from django.core import serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
-
+from django.core.mail import send_mail
 from userauth.models import UserProfile,User
 from .models import Classroom,AnswerSheet,Assignment,DoubtSection
 from .permissions import IsStudent,IsTeacher,IsTeacherOrIsStudent
-
+from django.utils import timezone
 from .serializers import ClassroomSerializer,AnswerSheetSerializer,Portal,AssignmentSerializer, DoubtSectionSerializer,StudentPortalSerializer
 from userauth.permissions import IsLoggedInUserOrAdmin, IsAdminUser
 from rest_framework.response import Response
@@ -26,7 +26,9 @@ def get_random_string(length):
     result_str = ''.join(random.choice(letters) for i in range(length))
     return result_str
 
-class ClassroomViewSet(viewsets.ModelViewSet):
+class ClassroomViewSet(mixins.CreateModelMixin,
+                   mixins.ListModelMixin,
+                   viewsets.GenericViewSet):
     model = Classroom
     queryset = Classroom.objects.all()
     serializer_class = ClassroomSerializer
@@ -51,13 +53,10 @@ class ClassroomViewSet(viewsets.ModelViewSet):
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
     def get_permissions(self):
         permission_classes = []
         if self.action == 'create':
             permission_classes = [IsTeacher,IsAuthenticated]
-        elif self.action == 'retrieve':
-            permission_classes = [IsTeacherOrIsStudent]
         elif self.action == 'update' or self.action == 'partial_update' or self.action == 'destroy':
             permission_classes = [IsTeacher,IsAuthenticated]
         elif self.action == 'list' or self.action == 'destroy':
@@ -98,7 +97,7 @@ class AssignmentPost(APIView):
             serializer = AssignmentSerializer(assignment,many=True)
             return Response(serializer.data)
         else:
-            return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
     def post(self, request, pk, format=None):
         user_profile = request.user.profile
         classroom = self.get_object(pk)
@@ -106,67 +105,27 @@ class AssignmentPost(APIView):
             data=request.data
             data['classroom'] = classroom.id
             try:
-               if data['submit_by'] <= datetime.now() + timedelta(minutes=2):
-                   return Response({"details" : "submit_by can not be smaller than current time + 2 minutes."})
+               if data['submit_by'] <= timezone.now() + timedelta(minutes=2):
+                   return Response({"submit_by" : "[can not be smaller than current time + 2 minutes.]"},status=status.HTTP_400_BAD_REQUEST)
             except:
                 pass
+            email_list =[]
+            for student in classroom.student.all():
+                email_list.append(student.user.email)
+            send_mail(
+                'SmartLearn: You got a new assignment.',
+                f"Following are the details of your assignment:\n\tYour Class: {classroom.subject_name}\n\tTeacher: {classroom.teacher.name}\n\tAssignment: {data['title']}\nPlease refer to SmartLearn App for more information about this assignment.",
+                'SmartLearn <nidhi.smartlearn@gmail.com>',
+                email_list,
+                fail_silently=False,
+            )
             serializer = AssignmentSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
                 return Response({'assignment_id' : serializer.data['id']},status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
-
-
-class DoubtSectionViewSet(viewsets.ModelViewSet):
-
-    queryset = DoubtSection.objects.all()
-    serializer_class = DoubtSectionSerializer
-
-
-    def create(self, request):
-        poster = request.user.email
-
-        classroom = request.data['classroom']
-        teacher = Classroom.objects.get(id = classroom).teacher.user.email
-        students = Classroom.objects.get(id = classroom).student.all()
-
-        print(poster)
-        # print(data.request)
-        # print(list(students))
-        # print([student.user.email for student in students])
-        [print(student.user.email) for student in students]
-        # print(teacher) 
-        print(poster == teacher)
-        # print(list(student))
-        print(poster in [student.user.email for student in students])
-        if poster == teacher:
-            for student in students:
-               print(student.user.email)
-        if not(poster == teacher or poster in [student.user.email for student in students]):
-            return Response(status= status.HTTP_401_UNAUTHORIZED)
-        
-        else:
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
- 
-
-    def get_permissions(self):
-        permission_classes = []
-        if self.action == 'create':
-            permission_classes = [IsAuthenticated]
-        # elif self.action == 'retrieve':
-        #     permission_classes = [IsTeacher,IsStudent]
-        # elif self.action == 'update' or self.action == 'partial_update' or self.action == 'destroy':
-        #     permission_classes = [IsTeacher,IsAuthenticated]
-        # elif self.action == 'list' or self.action == 'destroy':
-        #     permission_classes = [IsAuthenticated]
-        return [permission() for permission in permission_classes]
-    
+        return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
     
 
 class AssignmentView(APIView):
@@ -187,7 +146,7 @@ class AssignmentView(APIView):
             serializer = AssignmentSerializer(assignment)
             return Response(serializer.data)
         else:
-            return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
     
     def delete(self,request,pk,id,format=None):
         classroom = self.get_object(pk,id)
@@ -197,9 +156,9 @@ class AssignmentView(APIView):
             assignment.delete()
             return Response(status=status.HTTP_200_OK)
         else:
-            return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
 
-from django.utils import timezone  
+  
 class AnswerSheetPost(APIView):
     permission_classes = [IsAuthenticated,IsStudent]
     def post(self,request,class_id,assignment_id,format=None):
@@ -226,8 +185,8 @@ class AnswerSheetPost(APIView):
                     serializer.save()
                     return Response({"id" : serializer.data['id']},status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            return Response({"deatils" : "Already submitted."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail" : "Already submitted."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
             
 class AnswerSheetView(APIView):
     permission_classes = [IsAuthenticated]
@@ -250,27 +209,34 @@ class AnswerSheetView(APIView):
         if user_profile == answer.assignment.classroom.teacher or user_profile == answer.student :
             serializer = AnswerSheetSerializer(answer)
             return Response(serializer.data)
-        return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN) 
+        return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN) 
     
     def put(self,request,class_id,assignment_id,answer_id,format=None):
         user_profile = request.user.profile
         answer = self.get_object(class_id,assignment_id,answer_id)
         if  answer.checked == True:
-            return Response({'details' : "already checked."},status = status.HTTP_400_BAD_REQUEST)
+            return Response({'detail' : "already checked."},status = status.HTTP_400_BAD_REQUEST)
         if user_profile == answer.assignment.classroom.teacher:
             data=request.data
             try: 
                 marks = data['marks_scored']
             except:
-                return Response({"details" : "marks_scored field is required."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail" : "marks_scored field is required."}, status=status.HTTP_400_BAD_REQUEST)
             if marks <= answer.assignment.max_marks:
                 answer.marks_scored = marks
                 answer.checked = True
                 answer.save()
+                send_mail(
+                'SmartLearn: Your AnswerSheet has been checked.',
+                f"Following are the details of your assignment:\n\tYour Class: {answer.assignment.classroom.subject_name}\n\tTeacher: {answer.assignment.classroom.teacher.name}\n\tAssignment: {answer.assignment.title}\nPlease refer to SmartLearn App to check your marks.",
+                'SmartLearn <nidhi.smartlearn@gmail.com>',
+                [answer.student.user.email,],
+                fail_silently=False,
+            )
                 serializer = AnswerSheetSerializer(answer)
-                return Response({"details" : "Answer sheet checked"},status=status.HTTP_200_OK)
-            return Response({'details': "marks_scored should not be greater that max_marks"},status=status.HTTP_400_BAD_REQUEST)
-        return Response({"details": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)  
+                return Response({"detail" : "Answer sheet checked"},status=status.HTTP_200_OK)
+            return Response({'detail': "marks_scored should not be greater that max_marks"},status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)  
 
 
 class ListOfAnswers(APIView):
@@ -292,8 +258,8 @@ class ListOfAnswers(APIView):
             answers = AnswerSheet.objects.filter(assignment=assignment)
             serializer = AnswerSheetSerializer(answers,many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response({"details" : "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
-class PortalView(APIView):
+        return Response({"detail" : "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
+class PortalStudentView(APIView):
     permission_classes = [IsAuthenticated]
     def get_class(self,class_id):
         try: 
@@ -330,5 +296,103 @@ class PortalView(APIView):
             portal =Portal(student=student.id,percentage=percentage,no_of_assignments=total_assignment,no_of_answers=no_of_answer)
             serializer = StudentPortalSerializer(portal)
             return Response(serializer.data,status=status.HTTP_200_OK)
-        return Response({'details' : "You do not have permission to perform this action."},status=status.HTTP_403_FORBIDDEN)
+        return Response({'detail' : "You do not have permission to perform this action."},status=status.HTTP_403_FORBIDDEN)
 
+class DoubtSectionView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, class_id):
+        try:
+            classroom = Classroom.objects.get(pk=class_id)
+            doubts = classroom.doubt.all()
+        except:
+            raise Http404
+        
+        if not(request.user.email == classroom.teacher.user.email or request.user.email in [student.user.email for student in classroom.student.all()]): 
+            return Response({"Message":"You are not a part of this Classroom"},status= status.HTTP_401_UNAUTHORIZED)
+        serializer = DoubtSectionSerializer(doubts, many = True)
+        return Response(serializer.data, status = status.HTTP_200_OK)
+        
+
+    def post(self, request, class_id):
+        data = request.data
+        poster = request.user
+        classroom = Classroom.objects.get(pk = class_id).id
+        teacher = Classroom.objects.get(id = class_id).teacher.user.email
+        students = Classroom.objects.get(id = class_id).student.all()
+        data['classroom'] = classroom
+        data['user'] = poster.profile.id
+        if not(poster.email == teacher or poster.email in [student.user.email for student in students]):
+            return Response(status= status.HTTP_401_UNAUTHORIZED)
+        else:
+            serializer = DoubtSectionSerializer(data=request.data)
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+class ClassroomDataView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self,request,class_id,format=None):
+        print(class_id)
+        try:
+            classroom = Classroom.objects.get(id=class_id)
+            print(class_id)
+        except:
+            raise Http404
+        if not (request.user.profile == classroom.teacher or request.user.profile in classroom.student.all()):
+            return Response({"detail": "You do not have permission to perform this action."},status=status.HTTP_403_FORBIDDEN)
+        students = UserProfileSerializer(classroom.student.all(),many=True)
+        teacher = UserProfileSerializer(classroom.teacher)
+        no_of_students = classroom.student.count()
+        class_code = classroom.class_code
+        subject_name = classroom.subject_name
+        response = { 'class_code': class_code, "subject_name" : subject_name,'no_of_students' : no_of_students , 'teacher' : teacher.data, 'students' : students.data }
+        return Response(response,status=status.HTTP_200_OK)
+
+
+class PortalTeacherView(APIView):
+    permission_classes = [IsAuthenticated]
+    data = dict()
+    def get(self, request, class_id):
+        try: 
+            classroom =  Classroom.objects.get(id=class_id)
+        except:
+            raise Http404
+        students = classroom.student.all()
+        if request.user.email == classroom.teacher.user.email:
+            student_count = 1
+            for student in students:
+                student_record = dict()
+                total_marks = 0
+                total_marks_scored = 0
+                assignment_count = 1
+                for assignment in classroom.assignment.all():
+                    assignment_record = dict()
+                    assignment_title = assignment.title
+                    assignment_marks  = float(assignment.max_marks) 
+                    student_profile = User.objects.get(email__iexact = student.user.email).profile
+                    try:
+                        marks_scored = float(assignment.answersheet.all().get(student = student_profile).marks_scored)
+                    except:
+                        # marks_scored = 0.0
+                        continue
+                    percentage = (marks_scored/assignment_marks) * 100
+                    total_marks += assignment_marks
+                    total_marks_scored += marks_scored
+                    serializer = UserProfileSerializer(student_profile)
+                    assignment_record["assignment_title"]  = assignment_title
+                    assignment_record["total_marks"]  = assignment_marks
+                    assignment_record["marks_scored"]  = marks_scored
+                    assignment_record["percentage"]  = percentage
+                    student_record["student"] = serializer.data
+                    student_record[f"Assignment-{assignment_count}"] = assignment_record
+                    assignment_count += 1
+                    
+                overall_percentage = (total_marks_scored/total_marks)*100
+                student_record["overall_percentage"] = overall_percentage
+                self.data[f"student-{student_count}"] = student_record
+                student_count += 1
+                
+        return JsonResponse(self.data)

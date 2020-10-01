@@ -9,12 +9,11 @@ from userauth.models import UserProfile
 class ClassroomSerializer(serializers.ModelSerializer):    
     class Meta:
         model = Classroom
-        fields = ('id','class_code','subject_name','description','teacher','student')
+        fields = ('id','class_code','subject_name','description','teacher')
         write_only_fields = ('student',)
     def to_representation(self, instance):
         response = super().to_representation(instance)
         response['teacher'] = UserProfileSerializer(instance.teacher).data
-       # response['student'] = UserProfileSerializer(instance.student,many=True).data
         return response
 
 class AnswerSheetSerializer(serializers.ModelSerializer):    
@@ -33,6 +32,10 @@ class DoubtSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = DoubtSection
         fields =('__all__')
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        response['user'] = UserProfileSerializer(instance.user).data
+        return response
 
 class Portal:
     def __init__(self, student, percentage, no_of_assignments,no_of_answers):
