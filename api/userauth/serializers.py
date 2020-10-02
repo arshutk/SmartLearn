@@ -1,22 +1,42 @@
+import json
 from rest_framework import serializers
 from userauth.models import User, UserProfile
 from django.contrib.auth import authenticate
 from rest_framework_jwt.settings import api_settings
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from userauth.models import User, OtpModel
+from rest_framework import exceptions
+from userauth import views 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        data = super(MyTokenObtainPairSerializer, self).validate(attrs)
-        data.update({'email': self.user.email})
-        data.update({'name' : self.user.profile.name})
-        try:
-            data.update({'profile_pic': self.user.profile.picture.url})
-        except:
-            data.update({'profile_pic': None})
-        data.update({'is_teacher': self.user.profile.is_teacher})
-        return data
+        request = self.context["request"].data
+        data = json.dumps(request)
+        request_data = json.loads(data)
 
+        email = request_data.get("email","")
+        password = request_data.get("password","")
+        
+        try:
+            user = User.objects.get(email__iexact = email)
+        except:
+            raise exceptions.ParseError("User with entered email doesn't exists.")   #400
+
+        if user.is_active:
+            if user.check_password(password):
+                data = super(MyTokenObtainPairSerializer, self).validate(attrs)
+                data.update({'email': self.user.email})
+                data.update({'name' : self.user.profile.name})
+                try:
+                    data.update({'profile_pic': self.user.profile.picture.url})
+                except:
+                    data.update({'profile_pic': None})
+                data.update({'is_teacher': self.user.profile.is_teacher})
+                return data                                                          #200
+            raise exceptions.AuthenticationFailed("Entered password is wrong")       #401
+        views.send_otp_email(email, body = "Hello Your OTP for verifying your SmartLearn account")
+        raise exceptions.PermissionDenied("User is registered but not verified")     #403
 
 
 class UserProfileSerializer(serializers.ModelSerializer):    

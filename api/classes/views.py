@@ -35,7 +35,7 @@ class ClassroomViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         if self.request.user.profile.is_teacher == True:
-            print(self.request.user.profile)
+            # print(self.request.user.profile)
             return Classroom.objects.filter(teacher=self.request.user.profile)
         print(self.request.user.profile)
         return  Classroom.objects.filter(student=self.request.user.profile)
