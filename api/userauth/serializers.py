@@ -8,6 +8,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from userauth.models import User, OtpModel
 from rest_framework import exceptions
 from userauth import views 
+from django.conf import settings
+import urllib.request
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -22,16 +24,18 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             user = User.objects.get(email__iexact = email)
         except:
             raise exceptions.ParseError("User with entered email doesn't exists.")   #400
-
         if user.is_active:
             if user.check_password(password):
                 data = super(MyTokenObtainPairSerializer, self).validate(attrs)
                 data.update({'email': self.user.email})
                 data.update({'name' : self.user.profile.name})
                 try:
-                    data.update({'profile_pic': self.user.profile.picture.url})
+                    domain_name = self.context["request"].META['HTTP_HOST']
+                    picture_url = self.user.profile.picture.url
+                    absolute_url = 'http://' + domain_name + picture_url
+                    data.update({'picture': absolute_url})
                 except:
-                    data.update({'profile_pic': None})
+                    data.update({'picture': None})
                 data.update({'is_teacher': self.user.profile.is_teacher})
                 return data                                                          #200
             raise exceptions.AuthenticationFailed("Entered password is wrong")       #401
@@ -39,16 +43,25 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         raise exceptions.PermissionDenied("User is registered but not verified")     #403
 
 
-class UserProfileSerializer(serializers.ModelSerializer):    
+
+class UserProfileSerializer(serializers.HyperlinkedModelSerializer):    
+   
     class Meta:
         model = UserProfile
-        fields = ('id','name', 'picture','is_teacher')
+
+        fields = ('name', 'picture')
+        write_only_fields = ('is_teacher')
+
+
+
+
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     profile = UserProfileSerializer(required=True)
+
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'password', 'profile',)
+        fields = ('id','email', 'first_name', 'last_name', 'password', 'profile',)
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -57,7 +70,7 @@ class UserSerializer(serializers.HyperlinkedModelSerializer):
         user = User(**validated_data)
         user.set_password(password)
         user.save()
-        UserProfile.objects.create(user=user, **profile_data)
+        UserProfile.objects.create(user=user,**profile_data)
         return user
 
     def update(self, instance, validated_data):

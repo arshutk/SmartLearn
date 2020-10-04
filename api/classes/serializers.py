@@ -6,15 +6,16 @@ from django.contrib.auth import authenticate
 from rest_framework_jwt.settings import api_settings
 from userauth.serializers import UserProfileSerializer
 from userauth.models import UserProfile
+
 class ClassroomSerializer(serializers.ModelSerializer):    
     class Meta:
         model = Classroom
-        fields = ('id','class_code','subject_name','description','teacher','student')
+        fields = ('id','class_code','subject_name','description','teacher')
         write_only_fields = ('student',)
     def to_representation(self, instance):
         response = super().to_representation(instance)
-        response['teacher'] = UserProfileSerializer(instance.teacher).data
-       # response['student'] = UserProfileSerializer(instance.student,many=True).data
+        # response['teacher'] = UserProfileSerializer(instance.teacher).data
+        response['teacher'] = UserProfileSerializer(instance.teacher, context = {'request': self.context.get('request')}).data
         return response
 
 class AnswerSheetSerializer(serializers.ModelSerializer):    
@@ -35,8 +36,9 @@ class DoubtSectionSerializer(serializers.ModelSerializer):
         fields =('__all__')
     def to_representation(self, instance):
         response = super().to_representation(instance)
-        response['user'] = UserProfileSerializer(instance.user).data
-        response['classroom'] = ClassroomSerializer(instance.classroom).data
+        response['user'] = UserProfileSerializer(instance.user, context = {'request': self.context.get('request')}).data
+        # response['user'] = UserProfileSerializer(instance.user).data
+        # response['classroom'] = ClassroomSerializer(instance.classroom).data
         return response
 
 class Portal:
@@ -55,6 +57,7 @@ class StudentPortalSerializer(serializers.Serializer):
     def to_representation(self, instance):
         response = super().to_representation(instance)
         student = UserProfile.objects.get(id=instance.student)
-        response['student'] = UserProfileSerializer(student).data
+        response['student'] = UserProfileSerializer(student, context = {'request': self.context.get('request')}).data
+        # response['student'] = UserProfileSerializer(student).data
         return response
 

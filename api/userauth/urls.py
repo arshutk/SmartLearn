@@ -9,7 +9,8 @@ from rest_framework_simplejwt import views as jwt_views
 
 router = routers.DefaultRouter()
 router.register(r'users', UserViewSet)
-
+from django.conf import settings
+from django.conf.urls.static import static
 urlpatterns = [
     url(r'^', include(router.urls)),
     path('login/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -19,5 +20,6 @@ urlpatterns = [
     path('password/reset/verify', PasswordResetOTPConfirmView.as_view()),
     path('otp/resend/', OTPResend.as_view()),
     path('class/',include('classes.urls')),
-] 
+] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
+# ] 
 

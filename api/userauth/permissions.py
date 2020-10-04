@@ -3,11 +3,9 @@ from rest_framework import permissions
 class IsLoggedInUserOrAdmin(permissions.BasePermission):
     
     def has_permission(self, request, view):
-        print("haspermission")
         return request.user or request.user.is_staff
     
     def has_object_permission(self, request, view, obj):
-        print("haspermission--objects")
         return obj == request.user or request.user.is_staff
 
 class IsAdminUser(permissions.BasePermission):

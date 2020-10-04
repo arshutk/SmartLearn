@@ -5,15 +5,16 @@ from .models import Todo
 from .serializers import TodoSerializer
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from userauth.models import UserProfile
-# Create your views here.
 
 class TodoViewSet(viewsets.ModelViewSet):
     queryset = Todo.objects.all()
     serializer_class = TodoSerializer
     permission_classes =[IsAuthenticated]
+
     def get_queryset(self):
         queryset = Todo.objects.filter(user=self.request.user.profile)
         return queryset
+
     def create(self, request):
         data = request.data
         data['user'] = request.user.profile.id
