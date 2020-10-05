@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'userauth',
     'classes',
-    'todo'
+    'todo',
+    'forum',
 ]
 
 MIDDLEWARE = [
