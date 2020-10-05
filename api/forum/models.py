@@ -21,24 +21,24 @@ class Label(models.Model):
 
 
 class Forum(models.Model):
-    title  = models.CharField(max_length=50)
-    text   = models.TextField()
+    title  = models.CharField(max_length=50,blank=False)
+    text   = models.TextField(blank=False)
     image  = models.ImageField(upload_to='forum_posts', null = True, blank = True, max_length = 5000)
-    upvote = models.PositiveIntegerField(default = 0)
-    user   = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='poster')
-    tag    = models.ForeignKey(Label, on_delete = models.SET_NULL, null = True, blank = True ,related_name = 'tag')
-
+    upvotes = models.PositiveIntegerField(default=0)
+    upvotees = models.ManyToManyField(UserProfile,related_name="upvoted")
+    author   = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='blog')
+    tag    = models.ForeignKey(Label, on_delete = models.SET_NULL, null = True, blank = True ,related_name = 'forums')
     def __str__(self):
-        return f"{self.user.user.email} -> {self.title}"
-
-
+        return f"{self.author.user.email} -> {self.title}"
+    class Meta:
+        ordering = ['-upvotes',]
 
 class Comment(models.Model):
-    text           = models.TextField()
-    is_parent      = models.BooleanField(default = True)
-    forum          = models.ForeignKey(Forum, on_delete=models.CASCADE, related_name='forum')
-    parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null = True, blank = True)
-
+    text           = models.TextField(blank=False)
+    is_parent      = models.BooleanField(default = False)
+    forum          = models.ForeignKey(Forum,null = True, blank = True, on_delete=models.CASCADE, related_name='comments')
+    author         = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="comments")
+    parent_comment = models.ForeignKey('self', on_delete=models.CASCADE, null = True, blank = True,related_name="child_comments")
     def __str__(self):
         return f"{str(self.text)[:50]} -> {self.is_parent}"
 

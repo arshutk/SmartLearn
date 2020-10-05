@@ -7,12 +7,13 @@ from userauth.serializers import UserProfileSerializer
 class ForumSerializer(serializers.ModelSerializer):
     class Meta:
         model = Forum
-        fields = '__all__'
-    
+        fields = ('title','text','image','upvotes','tag','author')
+        write_only_fields = ('upvotees',)
     def to_representation(self, instance):
         response = super().to_representation(instance)
-        response['user'] = UserProfileSerializer(instance.user).data
+        response['author'] = UserProfileSerializer(instance.author,context = {'request' : self.context.get('request')}).data
         response['tag'] = LabelSerializer(instance.tag).data
+        response['comment_count'] = instance.comments.count()
         return response
 
 
@@ -20,10 +21,9 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = '__all__'
-    
     def to_representation(self, instance):
         response = super().to_representation(instance)
-        response['parent_comment'] = CommentSerializer(instance.parent_comment).data
+        response['child_comments'] = CommentSerializer(instance.child_comments.all(),many=True).data
         return response
 
 
