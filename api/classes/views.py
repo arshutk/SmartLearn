@@ -62,7 +62,7 @@ class ClassroomViewSet(mixins.CreateModelMixin,
             permission_classes = [IsTeacher,IsAuthenticated]
         elif self.action == 'update' or self.action == 'partial_update' or self.action == 'destroy':
             permission_classes = [IsTeacher,IsAuthenticated]
-        elif self.action == 'list' or self.action == 'destroy':
+        elif self.action == 'list':
             permission_classes = [IsAuthenticated]
         return [permission() for permission in permission_classes]
     
@@ -83,7 +83,6 @@ class ClassjoinView(APIView):
         class_join.student.add(current_user)
         class_join.save()
         serializer = ClassroomSerializer(class_join, context = {'request': request})
-        # return Response({'class_id': class_join.id}, status=status.HTTP_201_CREATED)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -142,7 +141,6 @@ class AssignmentView(APIView):
             return classroom
         except :
             raise Http404
-    
     def get(self,request,pk,id,format=None):
         classroom = self.get_object(pk,id)
         assignment = Assignment.objects.get(classroom=classroom,pk=id)
