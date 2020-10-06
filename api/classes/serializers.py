@@ -14,32 +14,53 @@ class ClassroomSerializer(serializers.ModelSerializer):
         write_only_fields = ('student',)
     def to_representation(self, instance):
         response = super().to_representation(instance)
-        # response['teacher'] = UserProfileSerializer(instance.teacher).data
         response['teacher'] = UserProfileSerializer(instance.teacher, context = {'request': self.context.get('request')}).data
         return response
+
 
 class AnswerSheetSerializer(serializers.ModelSerializer):    
     class Meta:
         model = AnswerSheet
         fields =('__all__')
-       
+
+    def to_representation(self,instance):
+        response = super().to_representation(instance)
+        response['student'] = UserProfileSerializer(instance.student, context = {'request': self.context.get('request')}).data
+        return response
+
 
 class AssignmentSerializer(serializers.ModelSerializer):    
+    is_attempted = serializers.SerializerMethodField('get_is_attempted')
+
     class Meta:
         model = Assignment
-        fields =('__all__')
-
+        fields =('title','description','time_created','submit_by','max_marks','file_linked','classroom','is_attempted')
+    
+    def get_is_attempted(self, obj):
+        user = self.context.get('request').user
+        if str(obj.classroom.teacher) != str(user):
+            try:
+                if not obj.answersheet.all():
+                    return False
+                for answer in obj.answersheet.all():
+                    if str(answer.student) == str(user):
+                        return True
+            except:
+                pass
+        else:
+            return None
+        
 
 class DoubtSectionSerializer(serializers.ModelSerializer):    
     class Meta:
         model = DoubtSection
         fields =('__all__')
+        
     def to_representation(self, instance):
         response = super().to_representation(instance)
         response['user'] = UserProfileSerializer(instance.user, context = {'request': self.context.get('request')}).data
-        # response['user'] = UserProfileSerializer(instance.user).data
-        # response['classroom'] = ClassroomSerializer(instance.classroom).data
         return response
+
 
 class Portal:
     def __init__(self, student, percentage, no_of_assignments,no_of_answers):
@@ -58,6 +79,5 @@ class StudentPortalSerializer(serializers.Serializer):
         response = super().to_representation(instance)
         student = UserProfile.objects.get(id=instance.student)
         response['student'] = UserProfileSerializer(student, context = {'request': self.context.get('request')}).data
-        # response['student'] = UserProfileSerializer(student).data
         return response
 

@@ -7,7 +7,6 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import AllowAny,IsAuthenticated,IsAuthenticatedOrReadOnly,IsAdminUser
 from django.http import Http404
 from .permissions import IsAuthor
-# pass context = {'request' : request} everywhere you instantiate a Serializer for absolute url
 
 class ForumView(ModelViewSet):
     queryset = Forum.objects.all()
