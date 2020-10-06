@@ -313,8 +313,10 @@ class DoubtSectionView(APIView):
         except:
             raise Http404
         
+ 
+
         if not(request.user.email == classroom.teacher.user.email or request.user.email in [student.user.email for student in classroom.student.all()]): 
-            return Response({"Message":"You are not a part of this Classroom"},status= status.HTTP_401_UNAUTHORIZED)
+            return Response({"Message":"You are not a participant of this Classroom"},status= status.HTTP_401_UNAUTHORIZED)
         serializer = DoubtSectionSerializer(doubts, many = True,context={'request': request})
         return Response(serializer.data, status = status.HTTP_200_OK)
         
@@ -335,6 +337,18 @@ class DoubtSectionView(APIView):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+# class PrivateChat(APIView):
+#     def post(self, request, class_id):
+#         data = request.data
+#         poster = request.user
+#         classroom = Classroom.objects.get(pk = class_id).id
+#         teacher = Classroom.objects.get(id = class_id).teacher.user.email
+#         students = Classroom.objects.get(id = class_id).student.all()
+#         data['classroom'] = classroom
+#         data['user'] = poster.profile.id
+#         if not(poster.email == teacher or poster.email in [student.user.email for student in students]):
+#             pass
 
 class ClassroomDataView(APIView):
     permission_classes = [IsAuthenticated]

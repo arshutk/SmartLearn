@@ -74,7 +74,7 @@ class CommentOnComment(APIView):
         data=request.data
         data['author'] =  request.user.profile.id
         data['parent_comment'] = parent_comment.id
-        datea['forum'] =parent_comment.forum.id
+        data['forum'] =parent_comment.forum.id
         serializer = CommentSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
@@ -84,20 +84,66 @@ class CommentOnComment(APIView):
         else:
             return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
-class UpvoteView(APIView):
-    permission_classes=[IsAuthenticated]
+class VoteView(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get_forum(self,forum_id):
         try:
             return Forum.objects.get(id=forum_id)
         except:
             raise Http404
+
+    def get(self, request, forum_id, *args, **kwargs):
+        forum = self.get_forum(forum_id)
+        serializer = ForumSerializer(forum)
+        votes = serializer.data.get('votes')
+        return Response({'votes':votes},status=status.HTTP_200_OK)
+
     def post(self,request,forum_id,format=None):
-        forum= self.get_forum(forum_id)
-        if request.user.profile in forum.upvotes.all():
-            return Response({'detail': "Already upvoted"},status=status.HTTP_400_BAD_REQUEST)
-        forum.upvote+=1
-        forum.upvotes.add(request.user.profile)
+        forum = self.get_forum(forum_id)
+        value = int(request.data.get('vote'))
+        if request.user.profile in forum.voter.all():
+                return Response({'detail': "Already voted"},status=status.HTTP_400_BAD_REQUEST)
+        if value > 0:
+            forum.votes += 1
+            forum.voter.add(request.user.profile)
+            forum.save()
+            return Response(status=status.HTTP_200_OK)
+        forum.votes -= 1
+        forum.voter.add(request.user.profile)
         forum.save()
         return Response(status=status.HTTP_200_OK)
-
         
+
+class FilterView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, search, *args, **kwargs):
+        try:
+            label = Label.objects.get(label_name = search)
+            forum_posts = Forum.objects.filter(tag  = label)
+            serializer  = ForumSerializer(forum_posts, many = True, context = {'request': request})
+            return Response(serializer.data, status = status.HTTP_200_OK)
+        except:
+            return Response({"There is no post with given searched tag"},status = status.HTTP_204_NO_CONTENT)
+
+class BookmarkView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get_forum(self,forum_id):
+        try:
+            return Forum.objects.get(id=forum_id)
+        except:
+            raise Http404
+
+    def post(self, request, forum_id, *args, **kwargs):
+        forum = self.get_forum(forum_id)
+        user  = request.user.profile
+        print(user)
+        print(forum)
+        print(user in forum.bookmark.all())
+        if user not in forum.bookmark.all():
+            forum.bookmark.add(user)
+            return Response({'msg': "Bookmark added"},status=status.HTTP_201_CREATED) 
+        return Response({'msg': "Post already bookmarked"},status=status.HTTP_400_BAD_REQUEST)
+

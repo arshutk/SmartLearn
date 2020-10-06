@@ -20,6 +20,7 @@ urlpatterns = [
     path('password/reset/verify', PasswordResetOTPConfirmView.as_view()),
     path('otp/resend/', OTPResend.as_view()),
     path('class/',include('classes.urls')),
+    
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 # ] 
 

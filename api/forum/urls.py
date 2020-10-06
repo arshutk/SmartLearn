@@ -9,6 +9,9 @@ router.register(r'',views.ForumView)
 urlpatterns = [
     path('<int:blog>/comment/',views.CommentView.as_view()),
     path('<int:blog>/comment/<int:comment_id>/',views.CommentOnComment.as_view()),
-    path('<int:forum_id>/upvote/',views.UpvoteView.as_view())
+    path('<int:forum_id>/vote/',views.VoteView.as_view()),
+    path('<int:forum_id>/bookmark/',views.BookmarkView.as_view()),
+    path('post/<str:search>/',views.FilterView.as_view()),
+
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 urlpatterns += [path('', include(router.urls)),]

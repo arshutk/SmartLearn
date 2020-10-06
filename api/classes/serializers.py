@@ -34,7 +34,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Assignment
-        fields =('title','description','time_created','submit_by','max_marks','file_linked','classroom','is_attempted')
+        fields =('id','title','description','time_created','submit_by','max_marks','file_linked','classroom','is_attempted')
     
     def get_is_attempted(self, obj):
         user = self.context.get('request').user

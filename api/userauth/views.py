@@ -49,6 +49,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         coming_data = request.data
+        print(coming_data)
         request_email = coming_data.get("email", "")
         
         if request_email:
@@ -131,7 +132,7 @@ class OTPVerificationView(APIView):
             user  =  User.objects.get(email__iexact = request_email)
             user.is_active = True
             user.save()
-            print(UserProfile.objects.get(user = user).is_teacher)
+            # print(UserProfile.objects.get(user = user).is_teacher)
 
             user_profile = UserProfile.objects.get(user = user)
             user_profile.is_teacher = request_is_teacher
@@ -212,6 +213,6 @@ def send_otp_email(email, body):
     otp = randint(100000, 999999) 
     time_of_creation = int(time.time())
     OtpModel.objects.create(otp = otp, otp_email = email, time_created = time_of_creation)
-    mail_body = f"{body} is {otp}. This OTP will be valid for 5 minutes."
-    send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [email], fail_silently = False) 
+    # mail_body = f"{body} is {otp}. This OTP will be valid for 5 minutes."
+    # send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [email], fail_silently = False) 
     return None

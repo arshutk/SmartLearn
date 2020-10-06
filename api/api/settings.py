@@ -25,7 +25,7 @@ SECRET_KEY = 'ac9@oq*!ba!i%8be5-ggpf(^dfrwqr1-h*&gp2icp3*51ynj*&'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['6adac3cc98cf.ngrok.io','localhost']
+ALLOWED_HOSTS = ['18655a468945.ngrok.io','localhost','127.0.0.1']
 
 # Application definition
 
@@ -131,6 +131,9 @@ import os
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
+
+# MEDIA_URL = ''
+# MEDIA_ROOT = os.path.join(BASE_DIR, '')
 
 
 # jwt authentication settings

@@ -7,8 +7,8 @@ from userauth.serializers import UserProfileSerializer
 class ForumSerializer(serializers.ModelSerializer):
     class Meta:
         model = Forum
-        fields = ('title','text','image','upvotes','tag','author')
-        write_only_fields = ('upvotees',)
+        fields = ('title','text','image','votes','tag','author')
+        write_only_fields = ('voter',)
     def to_representation(self, instance):
         response = super().to_representation(instance)
         response['author'] = UserProfileSerializer(instance.author,context = {'request' : self.context.get('request')}).data

@@ -31,6 +31,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
                 data.update({'name' : self.user.profile.name})
                 try:
                     domain_name = self.context["request"].META['HTTP_HOST']
+                    # picture_url = self.user.profile.picture.url.split('/')[-1]
                     picture_url = self.user.profile.picture.url
                     absolute_url = 'http://' + domain_name + picture_url
                     data.update({'picture': absolute_url})
@@ -45,6 +46,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class UserProfileSerializer(serializers.HyperlinkedModelSerializer):    
+    # picture = serializers.SerializerMethodField('picture_url')
    
     class Meta:
         model = UserProfile
@@ -52,7 +54,9 @@ class UserProfileSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('name', 'picture')
         write_only_fields = ('is_teacher')
 
-
+    # def picture_url(self, obj):
+    #     print(obj.picture, "yoyoyoyo")
+    #     return str(obj.picture).split('/')[-1]
 
 
 

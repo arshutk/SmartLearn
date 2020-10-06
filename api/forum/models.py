@@ -21,17 +21,18 @@ class Label(models.Model):
 
 
 class Forum(models.Model):
-    title  = models.CharField(max_length=50,blank=False)
-    text   = models.TextField(blank=False)
-    image  = models.ImageField(upload_to='forum_posts', null = True, blank = True, max_length = 5000)
-    upvotes = models.PositiveIntegerField(default=0)
-    upvotees = models.ManyToManyField(UserProfile,related_name="upvoted")
+    title    = models.CharField(max_length=50,blank=False)
+    text     = models.TextField(blank=False)
+    image    = models.ImageField(upload_to='forum_posts', null = True, blank = True, max_length = 5000)
+    votes    = models.IntegerField(default=0)
+    voter    = models.ManyToManyField(UserProfile,related_name="voted")
+    bookmark = models.ManyToManyField(UserProfile,related_name="bookmark")
     author   = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='blog')
-    tag    = models.ForeignKey(Label, on_delete = models.SET_NULL, null = True, blank = True ,related_name = 'forums')
+    tag      = models.ForeignKey(Label, on_delete = models.SET_NULL, null = True, blank = True ,related_name = 'forums')
     def __str__(self):
         return f"{self.author.user.email} -> {self.title}"
     class Meta:
-        ordering = ['-upvotes',]
+        ordering = ['-votes',]
 
 class Comment(models.Model):
     text           = models.TextField(blank=False)
