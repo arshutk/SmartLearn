@@ -45,3 +45,14 @@ class DoubtSection(models.Model):
 
     def __str__(self):
         return f'{self.user} : {str(self.doubt_text)[:50]}'
+
+class PrivateComment(models.Model):
+    time_created = models.DateTimeField(auto_now_add=True)
+    text = models.TextField(max_length=300)
+    assignment = models.ForeignKey(Assignment,on_delete=models.CASCADE,related_name="private_chats")
+    sender = models.ForeignKey(UserProfile,on_delete=models.CASCADE,related_name="private_chat_sent")
+    receiver = models.ForeignKey(UserProfile,on_delete=models.CASCADE,related_name="private_chat_received")
+    def ___str__(self):
+        return f'{self.author.name} - {self.time_created}'
+    class Meta:
+        ordering = ['time_created']
