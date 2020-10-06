@@ -3,7 +3,6 @@ from .models import Todo
 class TodoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Todo
-        fields =  ("id","title","description","date_time")
-        write_only_fields = ('user',)
-    
+        fields =  ("id","title","description","date_time","user")
+        
     

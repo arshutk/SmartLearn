@@ -27,7 +27,7 @@ class ForumView(ModelViewSet):
         print("calling retrieve")
         instance = self.get_object()
         serializer = self.get_serializer(instance) 
-        comments = CommentSerializer(instance.comments.all().filter(is_parent=True),many=True)
+        comments = CommentSerializer(instance.comments.all().filter(parent_comment=None),many=True)
         return Response({'blog': serializer.data, 'comments': comments.data})
     def get_permissions(self):
         permission_classes = []
@@ -46,11 +46,11 @@ class CommentView(APIView):
             return Forum.objects.get(id=blog)
         except:
             raise Http404
-    # def get(self,request,blog,format=None):
-    #     blog=self.get_blog(blog)
-    #     comments=blog.comments.all()
-    #     serializer = CommentSerializer(comments,many=True)
-    #     return Response(serializer.data)
+    def get(self,request,blog,format=None):
+        blog=self.get_blog(blog)
+        comments=blog.comments.all()
+        serializer = CommentSerializer(comments,many=True)
+        return Response(serializer.data)
     def post(self,request,blog,format=None):
         blog_id=self.get_blog(blog).id
         data=request.data

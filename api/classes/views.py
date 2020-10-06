@@ -6,10 +6,10 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from django.core.mail import send_mail
 from userauth.models import UserProfile,User
-from .models import Classroom,AnswerSheet,Assignment,DoubtSection
+from .models import Classroom,AnswerSheet,Assignment,DoubtSection,PrivateComment
 from .permissions import IsStudent,IsTeacher,IsTeacherOrIsStudent
 from django.utils import timezone
-from .serializers import ClassroomSerializer,AnswerSheetSerializer,Portal,AssignmentSerializer, DoubtSectionSerializer,StudentPortalSerializer
+from .serializers import ClassroomSerializer,AnswerSheetSerializer,AssignmentSerializer, DoubtSectionSerializer,PrivateCommentSerializer
 from userauth.permissions import IsLoggedInUserOrAdmin, IsAdminUser
 from rest_framework.response import Response
 from django.http import Http404
@@ -17,7 +17,7 @@ import string
 import random
 from userauth.serializers import UserProfileSerializer
 from django.forms.models import model_to_dict
-
+from django.db.models import Q
 from django.http import JsonResponse
 
 def get_random_string(length):
@@ -270,37 +270,61 @@ class PortalStudentView(APIView):
             return Classroom.objects.get(id=class_id)
         except:
             raise Http404
-    def get_student(self,student_id):
-        try: 
-            return UserProfile.objects.get(is_teacher=False,id=student_id)
-        except: 
-            raise Http404
-    def get(self,request,class_id,student_id,format=None):
+    def get(self,request,class_id,format=None):
         classroom = self.get_class(class_id)
-        student = self.get_student(student_id)
-        if request.user.profile == classroom.teacher or request.user.profile == student:
-            assignments = classroom.assignment.all()
-            answersheets = set()
-            max_marks = 0
-            marks = 0
-            no_of_answer = 0
-            total_assignment = assignments.count()
-            for assignment in assignments:
-                max_marks += assignment.max_marks
-                try:
-                    answer = AnswerSheet.objects.get(student=student,assignment=assignment)
-                    marks += answer.marks_scored
-                    no_of_answer += 1
-                except:
-                    pass
-            if max_marks!= 0:
-                percentage = 100*(marks/max_marks)
+        student = request.user.profile
+        if student not in classroom.student.all():
+            raise Http404
+        assignments = classroom.assignment.all()
+        percentage = 0.0
+        marks = 0.0
+        total_marks = 0.0
+        checked_assignment = []
+        unchecked_assignment = []
+        unattemped_assignment =[]
+        for assignment in assignments:
+            try:
+                answer = AnswerSheet.objects.get(student=student,assignment=assignment)
+            except:
+                details ={
+                    'id': assignment.id,
+                    'assignment' : assignment.title,
+                    'max_marks' :assignment.max_marks,
+                    'due_date' : assignment.submit_by
+                }
+                total_marks=total_marks + float(assignment.max_marks)
+                unattemped_assignment.append(details)
+                continue
+            if answer.checked:
+                marks = marks + float(answer.marks_scored)
+                total_marks=total_marks + float(assignment.max_marks)
+                details ={
+                    'id': assignment.id,
+                    'assignment': assignment.title,
+                    'marks_scored': answer.marks_scored,
+                    'max_marks': assignment.max_marks
+                }
+                checked_assignment.append(details)
             else:
-                percentage = 100
-            portal = Portal(student=student.id,percentage=percentage,no_of_assignments=total_assignment,no_of_answers=no_of_answer)
-            serializer = StudentPortalSerializer(portal)
-            return Response(serializer.data,status=status.HTTP_200_OK)
-        return Response({'detail' : "You do not have permission to perform this action."},status=status.HTTP_403_FORBIDDEN)
+                details = {
+                    'id': assignment.id,
+                    'assignment' : assignment.title,
+                    'max_marks' : assignment.max_marks
+                }
+                unchecked_assignment.append(details)            
+        if total_marks:
+            percentage = 100*(marks/total_marks)
+        else:
+            percentage = 100.00
+        response = {
+            'marks_obtained' : marks,
+            'maximum_marks' : total_marks,
+            'percentage': percentage,
+            'checked' : checked_assignment,
+            'unchecked' : unchecked_assignment,
+            'unattempted' : unattemped_assignment
+        }
+        return Response(response)
 
 class DoubtSectionView(APIView):
 
@@ -347,8 +371,8 @@ class ClassroomDataView(APIView):
             raise Http404
         if not (request.user.profile == classroom.teacher or request.user.profile in classroom.student.all()):
             return Response({"detail": "You do not have permission to perform this action."},status=status.HTTP_403_FORBIDDEN)
-        students = UserProfileSerializer(classroom.student.all(),many=True)
-        teacher = UserProfileSerializer(classroom.teacher)
+        students = UserProfileSerializer(classroom.student.all(),many=True,context={'request':request})
+        teacher = UserProfileSerializer(classroom.teacher,context={'request':request})
         no_of_students = classroom.student.count()
         class_code = classroom.class_code
         subject_name = classroom.subject_name
@@ -393,10 +417,85 @@ class PortalTeacherView(APIView):
                     student_record["student"] = serializer.data
                     student_record[f"Assignment-{assignment_count}"] = assignment_record
                     assignment_count += 1
-                    
-                overall_percentage = (total_marks_scored/total_marks)*100
+                if (total_marks==0):
+                    overall_percentage = 100
+                else:
+                    overall_percentage = (total_marks_scored/total_marks)*100
                 student_record["overall_percentage"] = overall_percentage
                 self.data[f"student-{student_count}"] = student_record
                 student_count += 1
                 
         return JsonResponse(self.data)
+
+class StudentPrivateCommentOnAssignment(APIView):
+    permission_classes = [IsStudent]
+    def get_assignment(self,class_id,assignment_id):
+        try:
+            return self.request.user.profile.ClassStudent.get(id=class_id).assignment.get(id=assignment_id)#assignment has no direct relation with any userprofile
+        except:
+            raise Http404
+    def post(self,request,class_id,assignment_id,format=None):
+        assignment =self.get_assignment(class_id,assignment_id)
+        teacher = assignment.classroom.teacher
+        data = request.data
+        data['sender'] = request.user.profile.id
+        data['receiver'] = teacher.id
+        data['assignment'] = assignment.id
+        serilaizer = PrivateCommentSerializer(data=data,context={'request': request})
+        if serilaizer.is_valid():
+            serilaizer.save()
+            send_mail(
+            'SmartLearn: Your Student added a private comment on assignment.',
+            f"Following are the details of your assignment:\n\tYour Class: {assignment.classroom.subject_name}\n\tStudent: {request.user.profile.name}\n\tAssignment: {assignment.title}\nPlease refer to SmartLearn App to check your marks.",
+            'SmartLearn <nidhi.smartlearn@gmail.com>',
+            [teacher.user.email,])
+            return Response(serilaizer.data,status=status.HTTP_201_CREATED)
+        return Response(serilaizer.errors,status=status.HTTP_400_BAD_REQUEST)
+    def get(self,request,class_id,assignment_id,format=None):
+        assignment = self.get_assignment(class_id,assignment_id)
+        # comments = request.user.profile.private_chat_sent.filter(assignment=assignment.id) | request.user.profile.private_chat_received.filter(assignment=assignment.id)
+        comments = PrivateComment.objects.filter(Q(sender=request.user.profile.id)|Q(receiver=request.user.profile.id),assignment=assignment.id)
+        serializer = PrivateCommentSerializer(comments,context={'request':request},many=True)
+        return Response(serializer.data)
+class TeacherPrivateCommentOnAssignment(APIView):
+    permission_classes = [IsTeacher]
+    def get_assignment(self,class_id,assignment_id):
+        try:
+            classroom = Classroom.objects.get(id=class_id)
+            return Assignment.objects.get(classroom=classroom,id=assignment_id)
+        except:
+            raise Http404
+    def get_student(self,class_id,student_id):
+        try:
+            classroom = Classroom.objects.get(id=class_id)
+            return classroom.student.get(id=student_id)
+        except:
+            raise Http404
+    def post(self,request,class_id,assignment_id,student_id,format=None):
+        assignment = self.get_assignment(class_id,assignment_id)
+        student = self.get_student(class_id,student_id)
+        if request.user.profile == assignment.classroom.teacher:
+            data = request.data
+            data['sender'] = request.user.profile.id
+            data['receiver'] = student.id
+            data['assignment'] = assignment_id
+            serilaizer = PrivateCommentSerializer(data=data,context={'request': request})
+            if serilaizer.is_valid():
+                serilaizer.save()
+                send_mail(
+                'SmartLearn: Teacher added a private comment on assignment.',
+                f"Following are the details of your assignment:\n\tYour Class: {assignment.classroom.subject_name}\n\tTeacher: {assignment.classroom.teacher.name}\n\tAssignment: {assignment.title}\nPlease refer to SmartLearn App to check your marks.",
+                'SmartLearn <nidhi.smartlearn@gmail.com>',
+                [student.user.email,],)
+                return Response(serilaizer.data,status=status.HTTP_201_CREATED)
+            return Response(serilaizer.errors,status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "You do not have permission to perform this action."},status=status.HTTP_403_FORBIDDEN)
+    def get(self,request,class_id,assignment_id,student_id,format=None):
+        assignment = self.get_assignment(class_id,assignment_id)
+        student = self.get_student(class_id,student_id)
+        if request.user.profile == assignment.classroom.teacher:
+            comments = PrivateComment.objects.filter(Q(sender=student.id)|Q(receiver=student.id),assignment=assignment.id)
+            serializer = PrivateCommentSerializer(comments,context={'request':request},many=True)
+            return Response(serializer.data)
+        else:
+            Response(status=status.HTTP_403_FORBIDDEN)
