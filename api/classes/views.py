@@ -217,8 +217,6 @@ class AnswerSheetView(APIView):
     def put(self,request,class_id,assignment_id,answer_id,format=None):
         user_profile = request.user.profile
         answer = self.get_object(class_id,assignment_id,answer_id)
-        if  answer.checked == True:
-            return Response({'detail' : "already checked."},status = status.HTTP_400_BAD_REQUEST)
         if user_profile == answer.assignment.classroom.teacher:
             data=request.data
             try: 
@@ -457,6 +455,8 @@ class StudentPrivateCommentOnAssignment(APIView):
         comments = PrivateComment.objects.filter(Q(sender=request.user.profile.id)|Q(receiver=request.user.profile.id),assignment=assignment.id)
         serializer = PrivateCommentSerializer(comments,context={'request':request},many=True)
         return Response(serializer.data)
+
+
 class TeacherPrivateCommentOnAssignment(APIView):
     permission_classes = [IsTeacher]
     def get_assignment(self,class_id,assignment_id):
