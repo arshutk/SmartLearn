@@ -213,6 +213,6 @@ def send_otp_email(email, body):
     otp = randint(100000, 999999) 
     time_of_creation = int(time.time())
     OtpModel.objects.create(otp = otp, otp_email = email, time_created = time_of_creation)
-    # mail_body = f"{body} is {otp}. This OTP will be valid for 5 minutes."
-    # send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [email], fail_silently = False) 
+    mail_body = f"{body} is {otp}. This OTP will be valid for 5 minutes."
+    send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [email], fail_silently = False) 
     return None

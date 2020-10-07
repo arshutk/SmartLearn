@@ -37,19 +37,27 @@ class AnswerSheet(models.Model):
 
 
 class DoubtSection(models.Model):
-    time_created = models.DateTimeField(auto_now_add = True)
-    doubt_text = models.TextField(max_length = 300)
-    file = models.FileField(upload_to = 'doubt-pdf/', blank = True, null = True, max_length = 1500,validators=[validate_file_extension])
-    is_private = models.BooleanField(default = False)
-    classroom = models.ForeignKey(Classroom, on_delete = models.CASCADE, verbose_name = "Classroom", related_name = "doubt")
-    user      = models.ForeignKey(UserProfile, on_delete=models.CASCADE,  verbose_name = "UserProfile", related_name = "userprofile")
+    time_created= models.DateTimeField(auto_now_add = True)
+    doubt_text  = models.TextField(max_length = 300)
+    file        = models.FileField(upload_to = 'doubt-pdf/', blank = True, null = True, max_length = 1500,validators=[validate_file_extension])
+    is_private  = models.BooleanField(default = False)
+    classroom   = models.ForeignKey(Classroom, on_delete = models.CASCADE, verbose_name = "Classroom", related_name = "doubt")
+    user        = models.ForeignKey(UserProfile, on_delete=models.CASCADE,  verbose_name = "UserProfile", related_name = "userprofile")
 
     def __str__(self):
         return f'{self.user} : {str(self.doubt_text)[:50]}'
 
-# class PrivateChat(models.Model):
-#     time_created = models.DateTimeField(auto_now_add = True)
-#     doubt_text = models.TextField(max_length = 300)
-#     is_private = models.BooleanField(default = False)
-#     classroom  = models.ForeignKey(Classroom, on_delete = models.CASCADE, )
-#     user      = models.ForeignKey(UserProfile, on_delete=models.CASCADE,  )
+class PrivateChat(models.Model):
+    time_created = models.DateTimeField(auto_now_add = True)
+    text         = models.TextField(max_length = 500)
+    file         = models.FileField(upload_to='privatechat/', null = True, blank = True, max_length = 500000, validators=[validate_file_extension])
+    sender       = models.ForeignKey(UserProfile, on_delete = models.CASCADE, related_name = "senderprofile" )
+    reciever     = models.ForeignKey(UserProfile, on_delete = models.CASCADE, related_name = "recieverprofile")
+    classroom    = models.ForeignKey(Classroom,   on_delete = models.CASCADE, related_name = "chatprivate")
+
+    def __str__(self):
+        return f'{self.sender.user.email} --> {self.reciever.user.email}'
+    
+    class Meta:
+        ordering = ('-time_created',)
+

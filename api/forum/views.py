@@ -1,4 +1,5 @@
 from .models import Forum, Comment, Label
+from .models import UserProfile
 from .serializers import ForumSerializer, CommentSerializer, LabelSerializer
 from rest_framework import status,filters
 from rest_framework.response import Response
@@ -45,11 +46,6 @@ class CommentView(APIView):
             return Forum.objects.get(id=blog)
         except:
             raise Http404
-    # def get(self,request,blog,format=None):
-    #     blog=self.get_blog(blog)
-    #     comments=blog.comments.all()
-    #     serializer = CommentSerializer(comments,many=True)
-    #     return Response(serializer.data)
     def post(self,request,blog,format=None):
         blog_id=self.get_blog(blog).id
         data=request.data
@@ -146,4 +142,26 @@ class BookmarkView(APIView):
             forum.bookmark.add(user)
             return Response({'msg': "Bookmark added"},status=status.HTTP_201_CREATED) 
         return Response({'msg': "Post already bookmarked"},status=status.HTTP_400_BAD_REQUEST)
+
+class GetBookmarks(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_user(self, user_id):
+        try:
+            return UserProfile.objects.get(id = user_id)
+        except:
+            raise Http404
+
+    def get(self, request, user_id, *args, **kwargs):
+        user = self.get_user(user_id)
+        forum = ForumSerializer(user.bookmarked.all(), many = True, context = {'request':request})
+        print(type(user.bookmarked.all().count()))
+        data = forum.data.copy()
+        return Response(data, status = status.HTTP_200_OK)
+
+class SharePostView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, post_id):
+        return Response({'share': request.META['HTTP_HOST'] + request.get_full_path()}, status = status.HTTP_200_OK)
 

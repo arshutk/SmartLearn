@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Classroom,Assignment,AnswerSheet, DoubtSection
+from .models import Classroom,Assignment,AnswerSheet, DoubtSection, PrivateChat
 
 from django.contrib.auth import authenticate
 from rest_framework_jwt.settings import api_settings
@@ -81,3 +81,15 @@ class StudentPortalSerializer(serializers.Serializer):
         response['student'] = UserProfileSerializer(student, context = {'request': self.context.get('request')}).data
         return response
 
+class PrivateChatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PrivateChat
+        fields =('__all__')
+    
+    def to_representation(self, instance):
+        response = super().to_representation(instance)
+        response['sender']     = UserProfileSerializer(instance.sender, context = {'request': self.context.get('request')}).data
+        response['reciever']   = UserProfileSerializer(instance.reciever, context = {'request': self.context.get('request')}).data
+        response['classroom']  = ClassroomSerializer(instance.classroom, context = {'request': self.context.get('request')}).data
+        return response
+        

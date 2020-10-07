@@ -6,10 +6,10 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from django.core.mail import send_mail
 from userauth.models import UserProfile,User
-from .models import Classroom,AnswerSheet,Assignment,DoubtSection
+from .models import Classroom,AnswerSheet,Assignment,DoubtSection, PrivateChat
 from .permissions import IsStudent,IsTeacher,IsTeacherOrIsStudent
 from django.utils import timezone
-from .serializers import ClassroomSerializer,AnswerSheetSerializer,Portal,AssignmentSerializer, DoubtSectionSerializer,StudentPortalSerializer
+from .serializers import ClassroomSerializer,AnswerSheetSerializer,Portal,AssignmentSerializer, DoubtSectionSerializer,StudentPortalSerializer, PrivateChatSerializer
 from userauth.permissions import IsLoggedInUserOrAdmin, IsAdminUser
 from rest_framework.response import Response
 from django.http import Http404
@@ -222,7 +222,7 @@ class AnswerSheetView(APIView):
         if user_profile == answer.assignment.classroom.teacher:
             data=request.data
             try: 
-                marks = data['marks_scored']
+                marks = int(data['marks_scored'])
             except:
                 return Response({"detail" : "marks_scored field is required."}, status=status.HTTP_400_BAD_REQUEST)
             if marks <= answer.assignment.max_marks:
@@ -313,7 +313,6 @@ class DoubtSectionView(APIView):
         except:
             raise Http404
         
- 
 
         if not(request.user.email == classroom.teacher.user.email or request.user.email in [student.user.email for student in classroom.student.all()]): 
             return Response({"Message":"You are not a participant of this Classroom"},status= status.HTTP_401_UNAUTHORIZED)
@@ -337,18 +336,6 @@ class DoubtSectionView(APIView):
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(status=status.HTTP_400_BAD_REQUEST)
-
-# class PrivateChat(APIView):
-#     def post(self, request, class_id):
-#         data = request.data
-#         poster = request.user
-#         classroom = Classroom.objects.get(pk = class_id).id
-#         teacher = Classroom.objects.get(id = class_id).teacher.user.email
-#         students = Classroom.objects.get(id = class_id).student.all()
-#         data['classroom'] = classroom
-#         data['user'] = poster.profile.id
-#         if not(poster.email == teacher or poster.email in [student.user.email for student in students]):
-#             pass
 
 class ClassroomDataView(APIView):
     permission_classes = [IsAuthenticated]
@@ -414,3 +401,89 @@ class PortalTeacherView(APIView):
                 student_count += 1
                 
         return JsonResponse(self.data)
+
+
+class PrivateChatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_class(self, class_id):
+        try:
+            return Classroom.objects.get(id = class_id)
+        except:
+            raise Http404
+
+    def get_reciever(self, reciever_id):
+        try:
+            return UserProfile.objects.get(id = reciever_id)
+        except:
+            raise Http404
+
+    def get_chat(self, class_id, reciever_id, sender_id):
+        try:
+            chat1 = PrivateChat.objects.filter(classroom = class_id, reciever = reciever_id, sender = sender_id )
+            chat2 = PrivateChat.objects.filter(classroom = class_id, reciever = sender_id, sender = reciever_id )
+            return chat1 | chat2
+        except:
+            return Response({"msg":"No chat history found"}, status = status.HTTP_404_NOT_FOUND)
+
+    def get(self, request, class_id, reciever_id):
+        sender_id    = request.user.profile.id
+        data = self.get_chat(class_id, reciever_id, sender_id)
+        serializer = PrivateChatSerializer(data, many = True, context={'request': request})
+        return Response(serializer.data, status = status.HTTP_200_OK)
+
+    def post(self, request, class_id, reciever_id):
+        classroom = self.get_class(class_id)
+        sender    = request.user
+        reciever  = self.get_reciever(reciever_id)
+        
+        if ((sender.email == classroom.teacher.user.email or 
+                sender.email in [student.user.email for student in classroom.student.all()])):
+
+                    if (reciever.user.email == classroom.teacher.user.email or 
+                            reciever.user.email in [student.user.email for student in classroom.student.all()]):
+
+                            if (sender.email != reciever.user.email):
+
+                                if not ((reciever.user.email in [student.user.email for student in classroom.student.all()]) and
+                                        (sender.email in [student.user.email for student in classroom.student.all()])):
+                                    data = request.data.copy()
+                                    data['classroom'] = classroom.id
+                                    data['sender']    = sender.profile.id
+                                    data['reciever']  = reciever.id
+
+                                    serializer = PrivateChatSerializer(data = data, context={'request': request})
+
+                                    if serializer.is_valid():
+                                        serializer.save()
+                                        if sender.email == classroom.teacher.user.email:
+                                            mail_body = f"You have a new message from your teacher {sender.profile.name} from classroom {classroom.subject_name}"
+                                            send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [reciever.user.email], fail_silently = False) 
+                                            return Response(serializer.data,status=status.HTTP_200_OK)
+                                        mail_body = f"You have a new message from one of you student {sender.profile.name} from classroom {classroom.subject_name}"
+                                        send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [reciever.user.email], fail_silently = False) 
+                                        return Response(serializer.data,status=status.HTTP_200_OK)
+
+                                    return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+                                else:
+                                    return Response({"msg":"Student can't chat with each other"}, status = status.HTTP_403_FORBIDDEN)
+
+                            else:
+                                return Response({"msg":"One can't send a message to himself"}, status = status.HTTP_403_FORBIDDEN)
+                                
+                    else:
+                        return Response({"msg":"Reciever isn't part of the classroom"}, status = status.HTTP_403_FORBIDDEN)
+        else:
+            return Response({"msg":"Sender isn't part of the classroom"}, status = status.HTTP_403_FORBIDDEN)
+
+    # def delete(self, request, class_id, reciever_id):
+    #     chat_id = request.data.get('id')
+    #     print(request.user.profile.id)
+    #     print(reciever_id)
+    #     if request.user.profile.id == reciever_id:
+    #         return Response({'msg':"Can't delete chat of others"}, status = status.HTTP_200_OK)
+    #     query = PrivateChat.objects.get(id = chat_id)
+    #     query.delete()
+    #     return Response({'msg':'Deleted chat successfully'}, status = status.HTTP_200_OK)
+        
+        

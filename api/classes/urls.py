@@ -26,7 +26,9 @@ urlpatterns = [
     path('classroom/<int:class_id>/portal/<int:student_id>/',views.PortalStudentView.as_view()),
     path('classroom/<int:class_id>/doubt/',views.DoubtSectionView.as_view()),
     path('classroom/<int:class_id>/details/',views.ClassroomDataView.as_view()),
-    path('classroom/<int:class_id>/portal/teacher/',views.PortalTeacherView.as_view())
+    path('classroom/<int:class_id>/portal/teacher/',views.PortalTeacherView.as_view()),
+    path('classroom/<int:class_id>/privatechat/<int:reciever_id>/',views.PrivateChatView.as_view()),
+
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 
 urlpatterns += [path('', include(router.urls)),]
