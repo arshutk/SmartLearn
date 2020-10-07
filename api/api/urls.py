@@ -28,7 +28,5 @@ urlpatterns = [
     url(r'^class/', include('classes.urls')),
     url(r'^todo/',include('todo.urls')),
     url(r'^forum/',include('forum.urls')),
-
-
-# ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
+    url(r'^library/',include('library.urls')),
 ] 

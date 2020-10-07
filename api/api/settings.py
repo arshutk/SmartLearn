@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'classes',
     'todo',
     'forum',
+    'library',
 ]
 
 MIDDLEWARE = [
