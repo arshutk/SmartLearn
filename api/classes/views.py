@@ -257,7 +257,7 @@ class ListOfAnswers(APIView):
         if user_profile == assignment.classroom.teacher:
             answers = AnswerSheet.objects.filter(assignment=assignment)
             serializer = AnswerSheetSerializer(answers,many=True,context={'request': request})
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
         return Response({"detail" : "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
         
 class PortalStudentView(APIView):
@@ -333,7 +333,6 @@ class DoubtSectionView(APIView):
             doubts = classroom.doubt.all()
         except:
             raise Http404
-        
 
         if not(request.user.email == classroom.teacher.user.email or request.user.email in [student.user.email for student in classroom.student.all()]): 
             return Response({"Message":"You are not a participant of this Classroom"},status= status.HTTP_401_UNAUTHORIZED)
@@ -353,10 +352,24 @@ class DoubtSectionView(APIView):
             return Response(status= status.HTTP_401_UNAUTHORIZED)
         else:
             serializer = DoubtSectionSerializer(data=request.data,context={'request': request})
-            if serializer.is_valid(raise_exception=True):
+            if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
+class DoubtSectionDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, class_id, doubt_id):
+        try:
+            doubt     = DoubtSection.objects.get(id = doubt_id)
+        except:
+            Http404
+        if request.user.profile == doubt.user:
+            doubt.delete()
+            return Response({'msg':'Message deleted successfully'}, status = status.HTTP_200_OK)
+        return Response({'msg':"You can't delete doubt text of other"}, status = status.HTTP_200_OK)
+
 
 class ClassroomDataView(APIView):
     permission_classes = [IsAuthenticated]
@@ -448,6 +461,7 @@ class PrivateChatView(APIView):
             return chat1 | chat2
         except:
             return Response({"msg":"No chat history found"}, status = status.HTTP_404_NOT_FOUND)
+    
 
     def get(self, request, class_id, reciever_id):
         sender_id    = request.user.profile.id
@@ -499,15 +513,20 @@ class PrivateChatView(APIView):
         else:
             return Response({"msg":"Sender isn't part of the classroom"}, status = status.HTTP_403_FORBIDDEN)
 
-    # def delete(self, request, class_id, reciever_id):
-    #     chat_id = request.data.get('id')
-    #     print(request.user.profile.id)
-    #     print(reciever_id)
-    #     if request.user.profile.id == reciever_id:
-    #         return Response({'msg':"Can't delete chat of others"}, status = status.HTTP_200_OK)
-    #     query = PrivateChat.objects.get(id = chat_id)
-    #     query.delete()
-    #     return Response({'msg':'Deleted chat successfully'}, status = status.HTTP_200_OK)
+class PrivateChatDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_chat_sender(self, chat_id):
+        return PrivateChat.objects.get(pk = chat_id).sender
+
+    def delete(self, request, class_id, chat_id):
+        sender = self.get_chat_sender(chat_id)
+        request_user = request.user.profile
+        if request_user == sender:
+            query = PrivateChat.objects.get(id = chat_id)
+            query.delete()
+            return Response({'msg':'Deleted chat successfully'}, status = status.HTTP_200_OK)
+        return Response({'msg':"Can't delete chat of others"}, status = status.HTTP_200_OK)
         
         
 class StudentPrivateCommentOnAssignment(APIView):

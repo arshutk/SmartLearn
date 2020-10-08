@@ -130,3 +130,15 @@ class GetBookmarks(APIView):
         forum = DocumentSerializer(user.doc_bookmarked.all(), many = True, context = {'request':request})
         data = forum.data
         return Response(data, status = status.HTTP_200_OK)
+
+class FilterView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, query):
+        try:
+            print(type(query))
+            result      = Document.objects.filter(category = query)
+            serializer  = DocumentSerializer(result, many = True, context = {'request': request})
+            return Response(serializer.data, status = status.HTTP_200_OK)
+        except:
+            return Response({"There is no document within searched category"},status = status.HTTP_204_NO_CONTENT)
