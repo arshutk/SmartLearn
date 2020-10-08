@@ -16,7 +16,7 @@ class Assignment(models.Model):
     description = models.TextField(blank=True)
     time_created = models.DateTimeField(auto_now=True)
     submit_by = models.DateTimeField(blank=True,null=True)
-    max_marks = models.DecimalField(max_digits=5,decimal_places=1,default=100,)
+    max_marks = models.PositiveIntegerField(default=100)
     file_linked = models.FileField(upload_to='class/assignment', null = True, max_length = 1500000,validators=[validate_file_extension])
     classroom = models.ForeignKey(Classroom,on_delete=models.CASCADE,related_name='assignment')
     def __str__(self):
@@ -27,7 +27,7 @@ class Assignment(models.Model):
         
 class AnswerSheet(models.Model):
     file_linked = models.FileField(upload_to="class/answers", null=True, max_length= 1500000,validators=[validate_file_extension])
-    marks_scored = models.DecimalField(max_digits=5,decimal_places=1,default=0)
+    marks_scored = models.PositiveIntegerField(default=0)
     late_submitted = models.BooleanField(default=False)
     checked = models.BooleanField(default=False)
     assignment = models.ForeignKey(Assignment,on_delete=models.CASCADE,related_name='answersheet')
@@ -39,7 +39,7 @@ class AnswerSheet(models.Model):
 class DoubtSection(models.Model):
     time_created= models.DateTimeField(auto_now_add = True)
     doubt_text  = models.TextField(max_length = 300)
-    file        = models.FileField(upload_to = 'doubt-pdf/', blank = True, null = True, max_length = 1500,validators=[validate_file_extension])
+    file        = models.FileField(upload_to = 'doubt-pdf/', blank = True, null = True, max_length = 1500000,validators=[validate_file_extension])
     is_private  = models.BooleanField(default = False)
     classroom   = models.ForeignKey(Classroom, on_delete = models.CASCADE, verbose_name = "Classroom", related_name = "doubt")
     user        = models.ForeignKey(UserProfile, on_delete=models.CASCADE,  verbose_name = "UserProfile", related_name = "userprofile")
@@ -61,3 +61,13 @@ class PrivateChat(models.Model):
     class Meta:
         ordering = ('-time_created',)
 
+class PrivateComment(models.Model):
+    time_created = models.DateTimeField(auto_now_add=True)
+    text = models.TextField(max_length=300)
+    assignment = models.ForeignKey(Assignment,on_delete=models.CASCADE,related_name="private_chats")
+    sender = models.ForeignKey(UserProfile,on_delete=models.CASCADE,related_name="private_chat_sent")
+    receiver = models.ForeignKey(UserProfile,on_delete=models.CASCADE,related_name="private_chat_received")
+    def ___str__(self):
+        return f'{self.author.name} - {self.time_created}'
+    class Meta:
+        ordering = ['time_created']

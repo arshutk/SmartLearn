@@ -25,8 +25,8 @@ class Forum(models.Model):
     text     = models.TextField(blank=False)
     image    = models.ImageField(upload_to='forum_posts', null = True, blank = True, max_length = 5000)
     votes    = models.IntegerField(default=0)
-    voter    = models.ManyToManyField(UserProfile,related_name="voted")
-    bookmark = models.ManyToManyField(UserProfile,related_name="bookmarked")
+    voter    = models.ManyToManyField(UserProfile,related_name="voted", blank = True)
+    bookmark = models.ManyToManyField(UserProfile,related_name="bookmarked", blank = True)
     author   = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='blog')
     tag      = models.ForeignKey(Label, on_delete = models.SET_NULL, null = True, blank = True ,related_name = 'forums')
     def __str__(self):

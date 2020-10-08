@@ -24,6 +24,7 @@ class UserAdmin(BaseUserAdmin):
     )
     list_display = ('email', 'is_staff')
     search_fields = ('email',)
+    readonly_fields = ('id',)
     ordering = ('email',)
     inlines = (UserProfileInline, )
     

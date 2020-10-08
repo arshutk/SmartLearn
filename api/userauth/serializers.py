@@ -51,7 +51,7 @@ class UserProfileSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = UserProfile
 
-        fields = ('name', 'picture')
+        fields = ('id','name', 'picture')
         write_only_fields = ('is_teacher')
 
     # def picture_url(self, obj):

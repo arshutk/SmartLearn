@@ -5,6 +5,7 @@ from django.conf import settings
 from django.utils import timezone
 from .validators import validate_name
 
+
 class UserManager(BaseUserManager):
 
     use_in_migrations = True
@@ -55,7 +56,7 @@ class User(AbstractUser):
 
 class UserProfile(models.Model):
     user         = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name ='profile')
-    name         = models.CharField(max_length = 30,blank=False,validators=[validate_name])
+    name         = models.CharField(max_length = 30,blank=False)
     picture      = models.ImageField(upload_to = 'images/', blank = True, null = True, max_length = 1500)
     is_teacher   = models.BooleanField(default = False)
 

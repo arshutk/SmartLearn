@@ -23,12 +23,14 @@ urlpatterns = [
     path('classroom/<int:class_id>/assignment/<int:assignment_id>/answer/',views.AnswerSheetPost.as_view()),
     path('classroom/<int:class_id>/assignment/<int:assignment_id>/answer/<int:answer_id>/',views.AnswerSheetView.as_view()),
     path('classroom/<int:class_id>/assignment/<int:assignment_id>/answers/',views.ListOfAnswers.as_view()),
-    path('classroom/<int:class_id>/portal/<int:student_id>/',views.PortalStudentView.as_view()),
+    path('classroom/<int:class_id>/portal/',views.PortalStudentView.as_view()),
     path('classroom/<int:class_id>/doubt/',views.DoubtSectionView.as_view()),
     path('classroom/<int:class_id>/details/',views.ClassroomDataView.as_view()),
     path('classroom/<int:class_id>/portal/teacher/',views.PortalTeacherView.as_view()),
     path('classroom/<int:class_id>/privatechat/<int:reciever_id>/',views.PrivateChatView.as_view()),
 
+    path('classroom/<int:class_id>/assignment/<int:assignment_id>/comment/',views.StudentPrivateCommentOnAssignment.as_view()),
+    path('classroom/<int:class_id>/assignment/<int:assignment_id>/comment/<int:student_id>/',views.TeacherPrivateCommentOnAssignment.as_view())
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 
 urlpatterns += [path('', include(router.urls)),]

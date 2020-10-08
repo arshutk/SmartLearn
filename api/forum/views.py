@@ -24,10 +24,9 @@ class ForumView(ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     def retrieve(self, request, *args, **kwargs):
-        print("calling retrieve")
         instance = self.get_object()
         serializer = self.get_serializer(instance) 
-        comments = CommentSerializer(instance.comments.all().filter(is_parent=True),many=True)
+        comments = CommentSerializer(instance.comments.all().filter(parent_comment=None),many=True)
         return Response({'blog': serializer.data, 'comments': comments.data})
     def get_permissions(self):
         permission_classes = []
@@ -46,6 +45,11 @@ class CommentView(APIView):
             return Forum.objects.get(id=blog)
         except:
             raise Http404
+    def get(self,request,blog,format=None):
+        blog=self.get_blog(blog)
+        comments=blog.comments.all()
+        serializer = CommentSerializer(comments,many=True)
+        return Response(serializer.data)
     def post(self,request,blog,format=None):
         blog_id=self.get_blog(blog).id
         data=request.data
@@ -143,6 +147,14 @@ class BookmarkView(APIView):
             return Response({'msg': "Bookmark added"},status=status.HTTP_201_CREATED) 
         return Response({'msg': "Post already bookmarked"},status=status.HTTP_400_BAD_REQUEST)
 
+    def delete(self, request, forum_id):
+        forum = self.get_forum(forum_id)
+        user  = request.user.profile
+        if user in forum.bookmark.all():
+            forum.bookmark.remove(user)
+            return Response({'msg': "Bookmark removed"},status=status.HTTP_201_CREATED) 
+        return Response({'msg': "Post is not bookmarked"},status=status.HTTP_400_BAD_REQUEST)
+
 class GetBookmarks(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -155,12 +167,11 @@ class GetBookmarks(APIView):
     def get(self, request, user_id, *args, **kwargs):
         user = self.get_user(user_id)
         forum = ForumSerializer(user.bookmarked.all(), many = True, context = {'request':request})
-        print(type(user.bookmarked.all().count()))
         data = forum.data.copy()
         return Response(data, status = status.HTTP_200_OK)
 
 class SharePostView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     
     def get(self, request, post_id):
         return Response({'share': request.META['HTTP_HOST'] + request.get_full_path()}, status = status.HTTP_200_OK)

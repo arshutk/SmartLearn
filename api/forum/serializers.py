@@ -12,7 +12,7 @@ class ForumSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         response = super().to_representation(instance)
         response['author'] = UserProfileSerializer(instance.author,context = {'request' : self.context.get('request')}).data
-        response['tag'] = LabelSerializer(instance.tag).data
+        response['tag']    = LabelSerializer(instance.tag).data
         response['comment_count']  = instance.comments.count()
         response['bookmark_count'] = instance.bookmark.count()
         return response

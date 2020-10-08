@@ -86,7 +86,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 data['is_teacher'] = user.profile.is_teacher
                 data.update(serializer.data)
                 mail_body = "you have succesfully changed your password for your SmartLearn account"
-                send_mail('Greetings from SmartLearn Team', mail_body, 'nidhi.smartlearn@gmail.com', [user.email], fail_silently = False) 
+                send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [user.email], fail_silently = False) 
                 return Response(data, status = status.HTTP_202_ACCEPTED)
             return Response(status = status.HTTP_400_BAD_REQUEST)
         return Response(status = status.HTTP_401_UNAUTHORIZED)
@@ -141,7 +141,7 @@ class OTPVerificationView(APIView):
             
             OtpModel.objects.filter(otp_email__iexact = request_email).delete()
             mail_body = "Congratulations..! You have successfully registered and verified your acoount on Smartlearn"
-            send_mail('Greetings from SmartLearn Team', mail_body, 'nidhi.smartlearn@gmail.com', [request_email], fail_silently = False) 
+            send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [request_email], fail_silently = False) 
             return Response(status = status.HTTP_202_ACCEPTED)
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
@@ -204,7 +204,7 @@ class OTPResend(APIView):
 
         if request_email:
             send_otp_email(request_email, body = "Hello Your OTP that you have requested")
-            return Response({"Resent the OTP the provided Email"}, status = status.HTTP_202_ACCEPTED)
+            return Response({"An OTP has been sent to provided Email"}, status = status.HTTP_202_ACCEPTED)
 
 
 

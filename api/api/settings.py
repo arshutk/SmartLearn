@@ -25,7 +25,7 @@ SECRET_KEY = 'ac9@oq*!ba!i%8be5-ggpf(^dfrwqr1-h*&gp2icp3*51ynj*&'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['18655a468945.ngrok.io','localhost','127.0.0.1']
+ALLOWED_HOSTS = ['3f28e66a9a75.ngrok.io','localhost','127.0.0.1']
 
 # Application definition
 
@@ -133,9 +133,6 @@ import os
 MEDIA_URL = 'media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
-# MEDIA_URL = ''
-# MEDIA_ROOT = os.path.join(BASE_DIR, '')
-
 
 # jwt authentication settings
 REST_FRAMEWORK = {
@@ -146,6 +143,11 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
     'rest_framework_simplejwt.authentication.JWTAuthentication',
     'rest_framework.authentication.BasicAuthentication'
+    ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.FormParser',
     )
 }
 
@@ -175,6 +177,8 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
+
+
 #Email Notifications
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
