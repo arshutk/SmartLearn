@@ -9,7 +9,8 @@ class Classroom(models.Model):
     student = models.ManyToManyField(UserProfile,verbose_name="Student",related_name ='ClassStudent',blank=True)
     def __str__(self):
         return f'{self.class_code} -> {self.subject_name} -> {self.teacher}'
-
+    class Meta:
+        ordering = ('-id',)
 
 class Assignment(models.Model):
     title = models.CharField(max_length=50, blank=False)
@@ -23,8 +24,9 @@ class Assignment(models.Model):
         return self.title
     class Meta:
         unique_together = ("title", "classroom")
+        ordering = ('-time_created',)
 
-        
+
 class AnswerSheet(models.Model):
     file_linked = models.FileField(upload_to="class/answers", null=True, max_length= 1500000,validators=[validate_file_extension])
     marks_scored = models.PositiveIntegerField(default=0)

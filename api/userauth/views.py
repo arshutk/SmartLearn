@@ -19,6 +19,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 import time
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from django.template import loader
+
 
 
 # /////////////////////////////
@@ -59,12 +61,11 @@ class UserViewSet(viewsets.ModelViewSet):
                     return Response("{User with this email already exists}",status = status.HTTP_226_IM_USED) 
 
             else:
-                    send_otp_email(request_email, body = "Hello Your OTP for registering your Account with SmartLearn")
+                    send_otp_email(request_email, body = "OTP for registering your Account with SmartLearn")
                     serializer = UserSerializer(data = coming_data,context={'request': request})
                     if serializer.is_valid():
                         serializer.save()
                         return Response("OTP has been sent", status = status.HTTP_201_CREATED)
-                        # return Response({}, status = status.HTTP_201_CREATED)
                     else:
                         return Response(serializer.errors, status = status.HTTP_400_BAD_REQUEST)
                     return Response(status = status.HTTP_200_OK)
@@ -85,8 +86,11 @@ class UserViewSet(viewsets.ModelViewSet):
                 data['email']  = user.email
                 data['is_teacher'] = user.profile.is_teacher
                 data.update(serializer.data)
-                mail_body = "you have succesfully changed your password for your SmartLearn account"
-                send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [user.email], fail_silently = False) 
+                mail_body = "You have succesfully changed your password for your SmartLearn account"
+                context = {'body':mail_body}
+                html_content = loader.render_to_string('msg.html', context)
+                send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [request_email], html_message = html_content, fail_silently = False) 
+                # send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [user.email], fail_silently = False) 
                 return Response(data, status = status.HTTP_202_ACCEPTED)
             return Response(status = status.HTTP_400_BAD_REQUEST)
         return Response(status = status.HTTP_401_UNAUTHORIZED)
@@ -132,16 +136,19 @@ class OTPVerificationView(APIView):
             user  =  User.objects.get(email__iexact = request_email)
             user.is_active = True
             user.save()
-            # print(UserProfile.objects.get(user = user).is_teacher)
 
             user_profile = UserProfile.objects.get(user = user)
             user_profile.is_teacher = request_is_teacher
             user_profile.save()
             
-            
             OtpModel.objects.filter(otp_email__iexact = request_email).delete()
             mail_body = "Congratulations..! You have successfully registered and verified your acoount on Smartlearn"
-            send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [request_email], fail_silently = False) 
+            context = {'body':mail_body}
+            html_content = loader.render_to_string('msg.html', context)
+            context = {'body':mail_body}
+            html_content = loader.render_to_string('msg.html', context)
+            send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [request_email], html_message = html_content, fail_silently = False) 
+            # send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [request_email], html_message = html_content, fail_silently = False) 
             return Response(status = status.HTTP_202_ACCEPTED)
         return Response(status = status.HTTP_400_BAD_REQUEST)
 
@@ -159,11 +166,11 @@ class PasswordResetView(APIView):
             return Response(status = status.HTTP_400_BAD_REQUEST)
 
         if not user.is_active:
-            send_otp_email(request_email, body = "Hello Your OTP for verifying your SmartLearn account")
+            send_otp_email(request_email, body = "OTP for verifying your SmartLearn account")
             return Response({"User is registered but not verified. An OTP has been sent to email."}, status = status.HTTP_308_PERMANENT_REDIRECT)
 
         if request_email:
-            send_otp_email(request_email, body = "Hello Your OTP for resetting your password of your SmartLearn account") 
+            send_otp_email(request_email, body = "OTP for resetting your password of your SmartLearn account") 
             data = {"id": user.id}
             return Response(data, status = status.HTTP_200_OK)
 
@@ -203,16 +210,24 @@ class OTPResend(APIView):
             return Response('{User not found}',status = status.HTTP_400_BAD_REQUEST)
 
         if request_email:
-            send_otp_email(request_email, body = "Hello Your OTP that you have requested")
+            send_otp_email(request_email, body = "OTP, that you have requested")
             return Response({"An OTP has been sent to provided Email"}, status = status.HTTP_202_ACCEPTED)
 
 
 
 def send_otp_email(email, body):
     OtpModel.objects.filter(otp_email__iexact = email).delete()
+
     otp = randint(100000, 999999) 
     time_of_creation = int(time.time())
     OtpModel.objects.create(otp = otp, otp_email = email, time_created = time_of_creation)
+
+    context = {
+        'otp' : otp,
+        'body': body,
+    }
+
+    html_content = loader.render_to_string('index.html', context)
     mail_body = f"{body} is {otp}. This OTP will be valid for 5 minutes."
-    send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [email], fail_silently = False) 
+    send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [email], html_message = html_content, fail_silently = False) 
     return None

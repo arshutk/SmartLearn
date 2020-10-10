@@ -367,8 +367,8 @@ class DoubtSectionDeleteView(APIView):
             Http404
         if request.user.profile == doubt.user:
             doubt.delete()
-            return Response({'msg':'Message deleted successfully'}, status = status.HTTP_200_OK)
-        return Response({'msg':"You can't delete doubt text of other"}, status = status.HTTP_200_OK)
+            return Response({'msg':'Message deleted successfully'}, status = status.HTTP_202_ACCEPTED)
+        return Response({'msg':"You can't delete doubt text of other"}, status = status.HTTP_403_FORBIDDEN)
 
 
 class ClassroomDataView(APIView):
@@ -393,50 +393,41 @@ class ClassroomDataView(APIView):
 
 class PortalTeacherView(APIView):
     permission_classes = [IsAuthenticated]
-    data = dict()
+
     def get(self, request, class_id):
         try: 
             classroom =  Classroom.objects.get(id=class_id)
         except:
             raise Http404
-        students = classroom.student.all()
-        if request.user.email == classroom.teacher.user.email:
-            student_count = 1
-            for student in students:
-                student_record = dict()
-                total_marks = 0
-                total_marks_scored = 0
-                assignment_count = 1
+        class_record          = list()
+        student_record        = dict()
+        unattemped_assignment = []
+        unchecked_assignment  = []
+        if request.user.profile == classroom.teacher:
+            for student in classroom.student.all():
+                total_marks  = 0
+                marks_obtained = 0
                 for assignment in classroom.assignment.all():
-                    assignment_record = dict()
-                    assignment_title = assignment.title
-                    assignment_marks  = float(assignment.max_marks) 
-                    student_profile = User.objects.get(email__iexact = student.user.email).profile
+                    total_marks  += assignment.max_marks
                     try:
-                        marks_scored = float(assignment.answersheet.all().get(student = student_profile).marks_scored)
+                        answer = assignment.answersheet.get(student = student)
+                        if answer.checked:
+                            marks_obtained = answer.marks_scored
+                            continue
+                        unchecked_assignment.append(AssignmentSerializer(assignment, context={'request': request}).data)
                     except:
-                        # marks_scored = 0.0
+                        unattemped_assignment.append(AssignmentSerializer(assignment, context={'request': request}).data)
                         continue
-                    percentage = (marks_scored/assignment_marks) * 100
-                    total_marks += assignment_marks
-                    total_marks_scored += marks_scored
-                    serializer = UserProfileSerializer(student_profile)
-                    assignment_record["assignment_title"]  = assignment_title
-                    assignment_record["total_marks"]  = assignment_marks
-                    assignment_record["marks_scored"]  = marks_scored
-                    assignment_record["percentage"]  = percentage
-                    student_record["student"] = serializer.data
-                    student_record[f"Assignment-{assignment_count}"] = assignment_record
-                    assignment_count += 1
-                if (total_marks==0):
-                    overall_percentage = 100
-                else:
-                    overall_percentage = (total_marks_scored/total_marks)*100
-                student_record["overall_percentage"] = overall_percentage
-                self.data[f"student-{student_count}"] = student_record
-                student_count += 1
-                
-        return JsonResponse(self.data)
+                overall_percentage = round(marks_obtained/total_marks*100, 2)
+                student_record['student']                = UserProfileSerializer(student, context={'request': request}).data  
+                student_record['maximum_marks']          = total_marks
+                student_record['marks_obtained']         = marks_obtained
+                student_record['percentage']             = overall_percentage
+                # student_record['unattemped_assignment']  = unattemped_assignment 
+                # student_record['unchecked_assignment']   = unchecked_assignment  
+                class_record.append(student_record.copy())
+            return Response(class_record, status = status.HTTP_200_OK)
+        return Response({'msg':'You dont have permission to access these records'}, status = status.HTTP_403_FORBIDDEN)
 
 
 class PrivateChatView(APIView):

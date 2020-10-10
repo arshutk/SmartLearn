@@ -39,6 +39,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assignment
         fields =('id','title','description','time_created','submit_by','max_marks','file_linked','classroom','answer_id')
+        # fields =('__all__')
 
     def get_answer_id(self, obj):
         user = self.context.get('request').user
@@ -55,14 +56,22 @@ class AssignmentSerializer(serializers.ModelSerializer):
             return None
 
 class DoubtSectionSerializer(serializers.ModelSerializer):    
+    doubt_sender = serializers.SerializerMethodField('get_doubt')
+
     class Meta:
-        model = DoubtSection
-        fields =('__all__')
+        model  = DoubtSection
+        fields =('id','time_created','doubt_text','file','classroom','user','doubt_sender')
         
     def to_representation(self, instance):
         response = super().to_representation(instance)
         response['user'] = UserProfileSerializer(instance.user, context = {'request': self.context.get('request')}).data
         return response
+
+    def get_doubt(self, obj):
+        user = self.context.get('request').user
+        if str(obj.user) != str(user):
+            return False
+        return True
 
 class PrivateCommentSerializer(serializers.ModelSerializer):
     class Meta:

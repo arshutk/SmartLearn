@@ -1,4 +1,4 @@
-from library.serializer import DocumentSerializer, CommentSerializer
+from library.serializers import DocumentSerializer, CommentSerializer, CollegeSerializer
 
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,18 +7,15 @@ from django.http import Http404
 
 from rest_framework.permissions import AllowAny,IsAuthenticated,IsAuthenticatedOrReadOnly
 
-from library.serializer import DocumentSerializer, CommentSerializer
-from library.models import Document, Comment
+from library.models import Document, Comment, College
 
 from userauth.models import UserProfile
 
+from rest_framework import generics
+
+
 class DocumentView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
-
-    def get(self, request):
-        data = Document.objects.all()
-        serializer = DocumentSerializer(data, many = True)
-        return Response(serializer.data, status = status.HTTP_200_OK)
     
     def post(self, request):
         data = request.data
@@ -87,6 +84,13 @@ class VoteView(APIView):
         document.save()
         return Response(status=status.HTTP_200_OK)
 
+class CollegeView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get(self, request):
+        data = College.objects.all()
+        serializer = CollegeSerializer(data, many = True)
+        return Response(serializer.data, status = status.HTTP_200_OK)
 
 class BookmarkView(APIView):
     permission_classes = [IsAuthenticated]
@@ -131,14 +135,38 @@ class GetBookmarks(APIView):
         data = forum.data
         return Response(data, status = status.HTTP_200_OK)
 
-class FilterView(APIView):
+class DocumentListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, query):
-        try:
-            print(type(query))
-            result      = Document.objects.filter(category = query)
-            serializer  = DocumentSerializer(result, many = True, context = {'request': request})
-            return Response(serializer.data, status = status.HTTP_200_OK)
-        except:
-            return Response({"There is no document within searched category"},status = status.HTTP_204_NO_CONTENT)
+    queryset = Document.objects.all()
+    serializer_class = DocumentSerializer
+    # def get(self, request, category_query = None, college_query = None, star_query = None):
+        # if category_query:
+        #     if college_query:
+        #         if star_query: 
+        #             result      = Document.objects.filter(category = category_query, college = college_query, stars = star_query)
+        #             serializer  = DocumentSerializer(result, many = True, context = {'request': request})
+        #             return Response(serializer.data, status = status.HTTP_200_OK)
+        #         objects.filter(category = category_query, college = college_query)
+        #         serializer  = DocumentSerializer(result, many = True, context = {'request': request})
+        #         return Response(serializer.data, status = status.HTTP_200_OK)
+        #     objects.filter(category = category_query)
+        #     serializer  = DocumentSerializer(result, many = True, context = {'request': request})
+        #     return Response(serializer.data, status = status.HTTP_200_OK)
+        # return Response({'msg':"Provide a filter query"},status = status.HTTP_204_NO_CONTENT)
+    def get_queryset(self):
+        queryset = Document.objects.all()
+        category = self.request.GET.get('category')
+        college  = self.request.GET.get('college')
+        stars    = self.request.GET.get('stars')
+
+        if category is not None:
+            if college is not None:
+                if stars is not None:
+                    queryset = queryset.filter(category__icontains = category, college = college, stars = stars)
+                queryset = queryset.filter(category__icontains = category, college = college)
+            queryset = queryset.filter(category__icontains = category)
+        return queryset
+        
+
+

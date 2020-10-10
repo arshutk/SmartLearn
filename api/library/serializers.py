@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from library.models import Document, Comment
+from library.models import Document, Comment, College
 
 from userauth.serializers import UserProfileSerializer
 
@@ -14,9 +14,7 @@ class DocumentSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         response = super().to_representation(instance)
         response['uploader'] = UserProfileSerializer(instance.uploader,context = {'request' : self.context.get('request')}).data
-        # response['bookmark'] = UserProfileSerializer(instance.bookmark,context = {'request' : self.context.get('request')}).data
-        # response['voter']    = UserProfileSerializer(instance.voter,   context = {'request' : self.context.get('request')}).data
-        # print(response)
+        response['college']  = CollegeSerializer(instance.college,   context = {'request' : self.context.get('request')}).data
         return response
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -30,3 +28,7 @@ class CommentSerializer(serializers.ModelSerializer):
         response['commenter'] = UserProfileSerializer(instance.commenter,context = {'request' : self.context.get('request')}).data
         return response
 
+class CollegeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = College
+        fields =  ('__all__')
