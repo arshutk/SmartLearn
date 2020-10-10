@@ -7,8 +7,8 @@ from forum import views
 router = routers.DefaultRouter()
 router.register(r'',views.ForumView)
 urlpatterns = [
-    path('<int:blog>/comment/',views.CommentView.as_view()),
-    path('<int:blog>/comment/<int:comment_id>/',views.CommentOnComment.as_view()),
+    path('<int:blog>/comment/',views.CommentViewOfForum.as_view()),
+    path('comment/<int:comment_id>/',views.CommentOnComment.as_view()),
     path('<int:forum_id>/vote/',views.VoteView.as_view()),
     path('<int:forum_id>/bookmark/',views.BookmarkView.as_view()),
     path('bookmark/<int:user_id>/',views.GetBookmarks.as_view()),

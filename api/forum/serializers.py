@@ -22,10 +22,10 @@ class ForumSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields = '__all__'
+        fields = ('id','text','is_parent','forum','parent_comment')
     def to_representation(self, instance):
         response = super().to_representation(instance)
-        response['child_comments'] = CommentSerializer(instance.child_comments.all(),many=True).data
+        response['count_child_comments'] = instance.child_comments.count()
         return response
 
 

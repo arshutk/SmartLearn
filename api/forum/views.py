@@ -9,11 +9,20 @@ from rest_framework.permissions import AllowAny,IsAuthenticated,IsAuthenticatedO
 from django.http import Http404
 from .permissions import IsAuthor
 from django.db.models import Count
+from rest_framework.pagination import PageNumberPagination
+class CommentPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = 'page_size'
+class ForumPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param ='page_size'
+
 class ForumView(ModelViewSet):
     queryset = Forum.objects.all().annotate(upvotes=Count('upvotees'),downvotes=Count('downvotees')).order_by('-upvotes','downvotes')
     serializer_class = ForumSerializer
     filter_backends = (filters.SearchFilter,)
     search_fields = ['title']
+    pagination_class = ForumPagination
     def create(self,request,*args, **kwargs):
         data=request.data
         author = request.user.profile
@@ -26,7 +35,7 @@ class ForumView(ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance) 
-        comments = CommentSerializer(instance.comments.all().filter(parent_comment=None),many=True)
+        comments = CommentSerializer(instance.comments.all().filter(parent_comment=None)[:5],many=True)
         return Response({'blog': serializer.data, 'comments': comments.data})
     def get_permissions(self):
         permission_classes = []
@@ -38,7 +47,7 @@ class ForumView(ModelViewSet):
             permission_classes = [AllowAny]
         return [permission() for permission in permission_classes]
 
-class CommentView(APIView):
+class CommentViewOfForum(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
     def get_blog(self,blog):
         try:
@@ -47,8 +56,10 @@ class CommentView(APIView):
             raise Http404
     def get(self,request,blog,format=None):
         blog=self.get_blog(blog)
-        comments=blog.comments.all()
-        serializer = CommentSerializer(comments,many=True)
+        comments=blog.comments.filter(parent_comment=None)
+        paginator = CommentPagination()
+        result_page = paginator.paginate_queryset(comments, request)
+        serializer = CommentSerializer(result_page,many=True)
         return Response(serializer.data)
     def post(self,request,blog,format=None):
         blog_id=self.get_blog(blog).id
@@ -63,14 +74,21 @@ class CommentView(APIView):
             return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 class CommentOnComment(APIView):
-    permission_classes = [IsAuthenticated]
-    def get_parent_comment(self,comment_id,blog):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    def get_parent_comment(self,comment_id):
         try:
-            return Forum.objects.get(id=blog).comments.get(id=comment_id)
+            return Comment.objects.get(id=comment_id)
         except:
             raise Http404
+    def get(self,request,comment_id,format=None):
+        parent_comment = self.get_parent_comment(comment_id)
+        child_comments = parent_comment.child_comments.all()
+        paginator = CommentPagination()
+        result_page = paginator.paginate_queryset(child_comments, request)
+        serializer = CommentSerializer(result_page,many=True)
+        return Response(serilaizer.data)
     def post(self,request,comment_id,format=None):
-        parent_comment= self.get_parent_comment(comment_id,blog)
+        parent_comment= self.get_parent_comment(comment_id)
         data=request.data
         data['author'] =  request.user.profile.id
         data['parent_comment'] = parent_comment.id
