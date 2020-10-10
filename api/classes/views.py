@@ -24,7 +24,7 @@ def get_random_string(length):
     """
     Returns Random String of given length
     """
-    letters = string.ascii_lowercase
+    letters = string.ascii_lowercase + string.digits
     result_str = ''.join(random.choice(letters) for i in range(length))
     return result_str
 
@@ -108,8 +108,8 @@ class AssignmentPost(APIView):
             data=request.data
             data['classroom'] = classroom.id
             try:
-                if datetime.strptime(data['submit_by'],'%Y-%m-%d %H:%M:%S') <= datetime.now()+timedelta(minutes=5):
-                    return Response({"submit_by" : "[can not be smaller than current time + 5 minutes.]"},status=status.HTTP_400_BAD_REQUEST)
+                if datetime.strptime(data['submit_by'],'%Y-%m-%dT%H:%M:%SZ') <= datetime.now():
+                    return Response({"submit_by" : "[can not be smaller than current time]"},status=status.HTTP_400_BAD_REQUEST)
             except:
                 pass
             email_list =[]
@@ -261,65 +261,51 @@ class ListOfAnswers(APIView):
         return Response({"detail" : "You do not have permission to perform this action."}, status=status.HTTP_403_FORBIDDEN)
         
 class PortalStudentView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsStudent]
     def get_class(self,class_id):
-        try: 
+        try:
             return Classroom.objects.get(id=class_id)
         except:
             raise Http404
-    def get(self,request,class_id,format=None):
+    def get(self,request,class_id):
         classroom = self.get_class(class_id)
         student = request.user.profile
         if student not in classroom.student.all():
             raise Http404
-        assignments = classroom.assignment.all()
+        all_assignments = classroom.assignment.all()
+        assignment_list = []      
         percentage = 0.0
-        marks = 0.0
-        total_marks = 0.0
-        checked_assignment = []
-        unchecked_assignment = []
-        unattemped_assignment =[]
-        for assignment in assignments:
+        total_marks = 0
+        marks_obtained = 0
+        for assignment in all_assignments:
+            details ={
+                'id': assignment.id,
+                'assignment' : assignment.title,
+                'max_marks' :assignment.max_marks,
+                'submitted' : False,
+                'checked' : False,
+                'marks_scored' : 0,
+                'due_date' : assignment.submit_by
+            }
             try:
-                answer = AnswerSheet.objects.get(student=student,assignment=assignment)
+                answer = assignment.answersheet.get(student=student)
             except:
-                details ={
-                    'id': assignment.id,
-                    'assignment' : assignment.title,
-                    'max_marks' :assignment.max_marks,
-                    'due_date' : assignment.submit_by
-                }
-                total_marks=total_marks + float(assignment.max_marks)
-                unattemped_assignment.append(details)
+                total_marks +=assignment.max_marks
+                assignment_list.append(details)
                 continue
+            details['submitted'] = True
+            details['checked'] = answer.checked
             if answer.checked:
-                marks = marks + float(answer.marks_scored)
-                total_marks=total_marks + float(assignment.max_marks)
-                details ={
-                    'id': assignment.id,
-                    'assignment': assignment.title,
-                    'marks_scored': answer.marks_scored,
-                    'max_marks': assignment.max_marks
-                }
-                checked_assignment.append(details)
-            else:
-                details = {
-                    'id': assignment.id,
-                    'assignment' : assignment.title,
-                    'max_marks' : assignment.max_marks
-                }
-                unchecked_assignment.append(details)            
-        if total_marks:
-            percentage = 100*(marks/total_marks)
+                total_marks+=assignment.max_marks
+                marks_obtained+=answer.marks_scored
+            assignment_list.append(details)
+        if total_marks!=0:
+            percentage = round(100*marks_obtained/total_marks,2)
         else:
             percentage = 100.00
         response = {
-            'marks_obtained' : marks,
-            'maximum_marks' : total_marks,
-            'percentage': percentage,
-            'checked' : checked_assignment,
-            'unchecked' : unchecked_assignment,
-            'unattempted' : unattemped_assignment
+            'percentage' : percentage,
+            'assignments' : assignment_list
         }
         return Response(response)
 
