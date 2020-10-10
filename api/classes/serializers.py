@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Classroom,Assignment,AnswerSheet, DoubtSection, PrivateChat, PrivateComment
+from .models import Classroom,Assignment,AnswerSheet, DoubtSection, PrivateChat, PrivateComment,Quiz,Answer,Question,QuizTakers
 
 from django.contrib.auth import authenticate
 from rest_framework_jwt.settings import api_settings
@@ -94,3 +94,36 @@ class PrivateChatSerializer(serializers.ModelSerializer):
         response['reciever']   = UserProfileSerializer(instance.reciever, context = {'request': self.context.get('request')}).data
         response['classroom']  = ClassroomSerializer(instance.classroom, context = {'request': self.context.get('request')}).data
         return response
+
+class QuizSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Quiz
+        fields = '__all__'
+    def to_representation(self,instance):
+        response = super().to_representation(instance)
+        response['questions'] = QuestionSerializer(instance.questions,many=True).data
+        return response
+
+class QuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = '__all__'
+    def to_representation(self,instance):
+        response = super().to_representation(instance)
+        response['answers'] = ChoiceSerializer(instance.answers,many=True).data
+        return response
+
+class QuizTakerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuizTakers
+        fields = '__all__'
+    def to_representation(self,instance):
+        response = super().to_representation(instance)
+        response['student'] = UserProfileSerializer(instance.student,context = {'request': self.context.get('request')}).data
+        return response
+        
+class ChoiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Answer
+        fields = '__all__'
+
