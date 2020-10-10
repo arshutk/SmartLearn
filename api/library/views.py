@@ -14,8 +14,34 @@ from userauth.models import UserProfile
 from rest_framework import generics
 
 
-class DocumentView(APIView):
+class DocumentView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    queryset = Document.objects.all()
+    serializer_class = DocumentSerializer
+
+    def get_queryset(self):
+        queryset = Document.objects.all()
+        category = self.request.GET.get('category','')
+        college  = self.request.GET.get('college','')
+        stars    = self.request.GET.get('stars','')
+
+        if category:
+            if college is None and stars is None:
+                queryset = queryset.filter(category__icontains = category)
+            elif college:
+                queryset = queryset.filter(category__icontains = category, college = college)
+            else:
+                queryset = queryset.filter(category__icontains = category, stars = stars)
+            return queryset
+        elif college: 
+            if stars:
+                queryset = queryset.filter(college = college, stars = stars)
+            queryset = queryset.filter(college = college)
+            return queryset
+        else:
+            queryset = queryset.filter(stars = stars)
+        return queryset
     
     def post(self, request):
         data = request.data
@@ -69,20 +95,39 @@ class VoteView(APIView):
         votes = serializer.data.get('stars')
         return Response({'votes':votes},status=status.HTTP_200_OK)
 
+    def doc_upvote(self, doc_id, user, document):
+        document.stars += 1
+        document.upvoter.add(user)
+        document.save()
+
+    def doc_downvote(self, doc_id, user, document):
+        document.stars -= 1
+        document.downvoter.add(user)
+        document.save()
+
     def post(self,request,doc_id):
         document = self.get_document(doc_id)
         vote = int(request.data.get('vote'))
-        if request.user.profile in document.voter.all():
-                return Response({'detail': "Already voted"},status=status.HTTP_400_BAD_REQUEST)
+        user = request.user.profile
         if vote > 0:
-            document.stars += 1
-            document.voter.add(request.user.profile)
-            document.save()
-            return Response(status=status.HTTP_200_OK)
-        document.stars -= 1
-        document.voter.add(request.user.profile)
-        document.save()
-        return Response(status=status.HTTP_200_OK)
+            if user in document.upvoter.all():
+                return Response({'detail': "Already upvoted"},status=status.HTTP_400_BAD_REQUEST)
+            elif user in document.downvoter.all():
+                self.doc_upvote(doc_id, user, document)
+                document.downvoter.remove(user)
+                return Response({'msg':'Document has been upvoted'},status=status.HTTP_200_OK)
+            self.doc_upvote(doc_id, user, document)
+            return Response({'msg':'Upvoted'},status=status.HTTP_200_OK)
+        if user in document.downvoter.all():
+                return Response({'detail': "Already downvoted"},status=status.HTTP_400_BAD_REQUEST)
+        elif user in document.upvoter.all():
+            self.doc_downvote(doc_id, user, document)
+            document.upvoter.remove(user)
+            return Response({'msg':'Document has been downvoted'},status=status.HTTP_200_OK)
+        self.doc_downvote(doc_id, user, document)
+        return Response({'msg':'Downvoted'},status=status.HTTP_200_OK)
+
+
 
 class CollegeView(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -135,38 +180,5 @@ class GetBookmarks(APIView):
         data = forum.data
         return Response(data, status = status.HTTP_200_OK)
 
-class DocumentListView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
-
-    queryset = Document.objects.all()
-    serializer_class = DocumentSerializer
-    # def get(self, request, category_query = None, college_query = None, star_query = None):
-        # if category_query:
-        #     if college_query:
-        #         if star_query: 
-        #             result      = Document.objects.filter(category = category_query, college = college_query, stars = star_query)
-        #             serializer  = DocumentSerializer(result, many = True, context = {'request': request})
-        #             return Response(serializer.data, status = status.HTTP_200_OK)
-        #         objects.filter(category = category_query, college = college_query)
-        #         serializer  = DocumentSerializer(result, many = True, context = {'request': request})
-        #         return Response(serializer.data, status = status.HTTP_200_OK)
-        #     objects.filter(category = category_query)
-        #     serializer  = DocumentSerializer(result, many = True, context = {'request': request})
-        #     return Response(serializer.data, status = status.HTTP_200_OK)
-        # return Response({'msg':"Provide a filter query"},status = status.HTTP_204_NO_CONTENT)
-    def get_queryset(self):
-        queryset = Document.objects.all()
-        category = self.request.GET.get('category')
-        college  = self.request.GET.get('college')
-        stars    = self.request.GET.get('stars')
-
-        if category is not None:
-            if college is not None:
-                if stars is not None:
-                    queryset = queryset.filter(category__icontains = category, college = college, stars = stars)
-                queryset = queryset.filter(category__icontains = category, college = college)
-            queryset = queryset.filter(category__icontains = category)
-        return queryset
-        
 
 

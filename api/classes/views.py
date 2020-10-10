@@ -185,6 +185,7 @@ class AnswerSheetPost(APIView):
                 serializer = AnswerSheetSerializer(data=data,context={'request': request})
                 if serializer.is_valid():
                     serializer.save()
+                    print(serializer.data['id'])
                     return Response({"id" : serializer.data['id']},status=status.HTTP_201_CREATED)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             return Response({"detail" : "Already submitted."}, status=status.HTTP_400_BAD_REQUEST)

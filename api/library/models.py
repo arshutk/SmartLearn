@@ -33,7 +33,8 @@ class Document(models.Model):
     category    = models.CharField(max_length = 20, choices = CATEGORY, default = 'Misc')
     college     = models.ForeignKey(College, on_delete=models.CASCADE, related_name="college")
     uploader    = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name="uploaded_by")
-    voter       = models.ManyToManyField(UserProfile,related_name="star_voter", blank = True)
+    upvoter     = models.ManyToManyField(UserProfile,related_name="star_upvoter", blank = True)
+    downvoter   = models.ManyToManyField(UserProfile,related_name="star_downvoter", blank = True)
     bookmark    = models.ManyToManyField(UserProfile, related_name="doc_bookmarked", blank = True)
 
     class Meta:

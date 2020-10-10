@@ -9,7 +9,7 @@ class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields =  ('id','title','description','file','stars','category','college','uploader')
-        write_only_fields = ('bookmark','voter',)
+        write_only_fields = ('bookmark','upvoter', 'downvoter')
 
     def to_representation(self, instance):
         response = super().to_representation(instance)

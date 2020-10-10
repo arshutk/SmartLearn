@@ -26,7 +26,7 @@ SECRET_KEY = 'ac9@oq*!ba!i%8be5-ggpf(^dfrwqr1-h*&gp2icp3*51ynj*&'
 DEBUG = True
 # DEBUG = False
 
-ALLOWED_HOSTS = ['5d3347e09e1d.ngrok.io','localhost','127.0.0.1',]
+ALLOWED_HOSTS = ['d401eed842a0.ngrok.io','localhost','127.0.0.1',]
 
 # Application definition
 
@@ -114,7 +114,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'Asia/Kolkata'
+# TIME_ZONE = 'Asia/Kolkata'
+TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
