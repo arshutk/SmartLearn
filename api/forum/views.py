@@ -8,9 +8,9 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import AllowAny,IsAuthenticated,IsAuthenticatedOrReadOnly,IsAdminUser
 from django.http import Http404
 from .permissions import IsAuthor
-
+from django.db.models import Count
 class ForumView(ModelViewSet):
-    queryset = Forum.objects.all()
+    queryset = Forum.objects.all().annotate(upvotes=Count('upvotees'),downvotes=Count('downvotees')).order_by('-upvotes','downvotes')
     serializer_class = ForumSerializer
     filter_backends = (filters.SearchFilter,)
     search_fields = ['title']
@@ -85,8 +85,7 @@ class CommentOnComment(APIView):
             return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 class VoteView(APIView):
-    permission_classes = [IsAuthenticated]
-
+    permission_classes = [IsAuthenticatedOrReadOnly]
     def get_forum(self,forum_id):
         try:
             return Forum.objects.get(id=forum_id)
@@ -95,25 +94,27 @@ class VoteView(APIView):
 
     def get(self, request, forum_id, *args, **kwargs):
         forum = self.get_forum(forum_id)
-        serializer = ForumSerializer(forum)
-        votes = serializer.data.get('votes')
-        return Response({'votes':votes},status=status.HTTP_200_OK)
-
-    def post(self,request,forum_id,format=None):
+        upvotes = forum.upvotees.count()
+        downvotes = forum.downvotees.count()
+        return Response({'upvotes':upvotes,'downvotes':downvotes},status=status.HTTP_200_OK)
+    def patch(self,request,forum_id,format=None):
+        upvotee = request.user.profile
         forum = self.get_forum(forum_id)
-        value = int(request.data.get('vote'))
-        if request.user.profile in forum.voter.all():
-                return Response({'detail': "Already voted"},status=status.HTTP_400_BAD_REQUEST)
-        if value > 0:
-            forum.votes += 1
-            forum.voter.add(request.user.profile)
-            forum.save()
-            return Response(status=status.HTTP_200_OK)
-        forum.votes -= 1
-        forum.voter.add(request.user.profile)
-        forum.save()
-        return Response(status=status.HTTP_200_OK)
-        
+        if upvotee in forum.downvotees.all():
+            forum.downvotees.remove(upvotee)
+        if upvotee in forum.upvotees.all():
+            return Response({'detail': 'Already Upvoted'},status=status.HTTP_400_BAD_REQUEST)
+        forum.upvotees.add(upvotee)
+        return Response({'detail' : 'Upvoted'},status=status.HTTP_201_CREATED)  
+    def put(self,request,forum_id,format=None):
+        downvotee = request.user.profile
+        forum = self.get_forum(forum_id)
+        if downvotee in forum.upvotees.all():
+            forum.upvotees.remove(downvotee)
+        if downvotee in forum.downvotees.all():
+            return Response({'detail': 'Already Downvoted'},status=status.HTTP_400_BAD_REQUEST)
+        forum.downvotees.add(downvotee)
+        return Response({'detail' : 'Downvoted'},status=status.HTTP_201_CREATED)
 
 class FilterView(APIView):
     permission_classes = [IsAuthenticated]
@@ -121,7 +122,7 @@ class FilterView(APIView):
     def get(self, request, search, *args, **kwargs):
         try:
             label = Label.objects.get(label_name = search)
-            forum_posts = Forum.objects.filter(tag  = label)
+            forum_posts = Forum.objects.filter(tag  = label).annotate(upvotes=Count('upvotees'),downvotes=Count('downvotees')).order_by('-upvotes','downvotes')
             serializer  = ForumSerializer(forum_posts, many = True, context = {'request': request})
             return Response(serializer.data, status = status.HTTP_200_OK)
         except:
@@ -166,7 +167,7 @@ class GetBookmarks(APIView):
 
     def get(self, request, user_id, *args, **kwargs):
         user = self.get_user(user_id)
-        forum = ForumSerializer(user.bookmarked.all(), many = True, context = {'request':request})
+        forum = ForumSerializer(user.bookmarked.all().annotate(upvotes=Count('upvotees'),downvotes=Count('downvotees')).order_by('-upvotes','downvotes'), many = True, context = {'request':request})
         data = forum.data.copy()
         return Response(data, status = status.HTTP_200_OK)
 
