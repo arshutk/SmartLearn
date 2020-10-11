@@ -1,9 +1,13 @@
 from django.contrib import admin
-from .models import Classroom,Assignment,AnswerSheet, DoubtSection, PrivateChat
+from . import models
 
 
-admin.site.register(Classroom)
-admin.site.register(Assignment)
-admin.site.register(AnswerSheet)
-admin.site.register(DoubtSection)
-admin.site.register(PrivateChat)
+admin.site.register(models.Classroom)
+admin.site.register(models.Assignment)
+admin.site.register(models.AnswerSheet)
+admin.site.register(models.DoubtSection)
+admin.site.register(models.PrivateChat)
+admin.site.register(models.Quiz)
+admin.site.register(models.Question)
+admin.site.register(models.Answer)
+admin.site.register(models.QuizTakers)

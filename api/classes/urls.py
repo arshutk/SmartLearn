@@ -31,7 +31,12 @@ urlpatterns = [
     path('classroom/<int:class_id>/privatechat/<int:reciever_id>/',views.PrivateChatView.as_view()),
     path('classroom/<int:class_id>/privatechat/delete/<int:chat_id>/',views.PrivateChatDeleteView.as_view()),
     path('classroom/<int:class_id>/assignment/<int:assignment_id>/comment/',views.StudentPrivateCommentOnAssignment.as_view()),
-    path('classroom/<int:class_id>/assignment/<int:assignment_id>/comment/<int:student_id>/',views.TeacherPrivateCommentOnAssignment.as_view())
+    path('classroom/<int:class_id>/assignment/<int:assignment_id>/comment/<int:student_id>/',views.TeacherPrivateCommentOnAssignment.as_view()),
+    path('classroom/<int:class_id>/quiz/',views.QuizView.as_view()),
+    path('classroom/<int:class_id>/quiz/<int:quiz_id>/add/',views.AddQuestion.as_view()),
+    path('classroom/quiz/questions/<int:question_id>/options/',views.AddOptions.as_view()),
+    path('classroom/quiz/<int:quiz_id>/share/',views.ShareQuiz.as_view()),
+    path('classroom/quiz/<int:quiz_id>/answer/',views.SubmitQuizAnswer.as_view()),
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
 
 urlpatterns += [path('', include(router.urls)),]

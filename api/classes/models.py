@@ -1,6 +1,7 @@
 from django.db import models
 from userauth.models import UserProfile
 from .validators import validate_file_extension
+from django.db.models import Q
 class Classroom(models.Model):
     class_code = models.CharField(max_length=50,blank=False,unique=True)
     subject_name = models.CharField(max_length=50,blank=False)
@@ -75,3 +76,38 @@ class PrivateComment(models.Model):
         return f'{self.author.name} - {self.time_created}'
     class Meta:
         ordering = ['time_created']
+
+class Quiz(models.Model):
+    name = models.CharField(max_length=1000)
+    questions_count = models.IntegerField(default=0)
+    description = models.CharField(max_length=70,null=True,blank=True)
+    created = models.DateTimeField(auto_now_add=True,null=True,blank=True)
+    classroom = models.ForeignKey(Classroom,on_delete=models.CASCADE,related_name="quiz")
+    shared = models.BooleanField(default=False)
+    class Meta:
+        ordering = ["created",]
+    def __str__(self):
+        return self.name
+
+class Question(models.Model):
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE,related_name='questions')
+    label = models.CharField(max_length=1000)
+    order = models.IntegerField(default=0)
+    def __str__(self):
+        return self.label
+
+class Answer(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE,related_name='answers')
+    text = models.CharField(max_length=1000)
+    is_correct = models.BooleanField(default=False)
+    def __str__(self):
+        return self.text
+
+class QuizTakers(models.Model):
+    student = models.ForeignKey(UserProfile, on_delete=models.CASCADE,related_name='quiz_taken')
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE,related_name='submitted_by')
+    correct_answers = models.IntegerField(default=0)
+    # completed = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    def __str__(self):
+        return self.student.name

@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from django.core.mail import send_mail
 from userauth.models import UserProfile,User
-from .models import Classroom,AnswerSheet,Assignment,DoubtSection, PrivateChat, PrivateComment
+from .models import Classroom,AnswerSheet,Assignment,DoubtSection, PrivateChat, PrivateComment,Quiz,QuizTakers,Answer,Question
 from .permissions import IsStudent,IsTeacher,IsTeacherOrIsStudent
 from django.utils import timezone
 from .serializers import ClassroomSerializer,AnswerSheetSerializer,AssignmentSerializer, DoubtSectionSerializer, PrivateChatSerializer, PrivateCommentSerializer
@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from django.http import Http404
 import string
 import random
+from . import serializers
 from userauth.serializers import UserProfileSerializer
 from django.forms.models import model_to_dict
 from django.db.models import Q
@@ -26,13 +27,11 @@ def get_random_string(length):
     """
     Returns Random String of given length
     """
-    letters = string.ascii_lowercase
+    letters = string.ascii_lowercase + string.digits
     result_str = ''.join(random.choice(letters) for i in range(length))
     return result_str
 
-class ClassroomViewSet(mixins.CreateModelMixin,
-                   mixins.ListModelMixin,
-                   viewsets.GenericViewSet):
+class ClassroomViewSet(viewsets.ModelViewSet):
     model = Classroom
     queryset = Classroom.objects.all()
     serializer_class = ClassroomSerializer
@@ -380,7 +379,6 @@ class ClassroomDataView(APIView):
 
 class PortalTeacherView(APIView):
     permission_classes = [IsAuthenticated]
-
     def get(self, request, class_id):
         try: 
             classroom =  Classroom.objects.get(id=class_id)
@@ -588,3 +586,168 @@ class TeacherPrivateCommentOnAssignment(APIView):
             return Response(serializer.data)
         else:
             Response(status=status.HTTP_403_FORBIDDEN)
+
+
+class QuizView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get_class(self,class_id):
+        try:
+            return Classroom.objects.get(id=class_id)
+        except:
+            raise Http404
+    def post(self,request,class_id,format=None):
+        classroom = self.get_class(class_id)
+        print(request.user.profile)
+        if request.user.profile != classroom.teacher:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        data = request.data
+        print(request.data)
+        data['classroom'] = classroom.id
+        serializer = serializers.QuizSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+    def get(self,request,class_id,format=None):
+        classroom = self.get_class(class_id)
+        if request.user.profile == classroom.teacher:
+            quizzes = classroom.quiz.all()
+        elif request.user.profile in classroom.student.all():
+            quizzes = classroom.quiz.filter(shared=True)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        serializer = serializers.QuizSerializer(quizzes,many=True)
+        return Response(serializer.data)
+
+class AddQuestion(APIView):
+    permission_classes =[IsTeacher]
+    def get_quiz(self,class_id,quiz_id):
+        try:
+            return Quiz.objects.get(id=quiz_id,classroom=class_id)
+        except:
+            raise Http404
+    def post(self,request,class_id,quiz_id,format=None):
+        quiz = self.get_quiz(class_id,quiz_id)
+        if request.user.profile != quiz.classroom.teacher:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        data =request.data
+        data['quiz'] = quiz.id
+        try:
+            answer = data['answer']
+        except:
+            return Response({"detail":"add correct answer too."},status=status.HTTP_400_BAD_REQUEST)
+        answer['is_correct'] = True
+        question_serializer = serializers.QuestionSerializer(data=data)
+        if question_serializer.is_valid():
+            question_serializer.save()
+            quiz.question_count = quiz.questions.count()
+            quiz.save()
+            answer['question'] = question_serializer.data['id']
+            answer_serializer = serializers.ChoiceSerializer(data=answer)
+            if answer_serializer.is_valid():
+                answer_serializer.save() 
+            return Response(question_serializer.data,status=status.HTTP_201_CREATED)
+        return Response(question_serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
+class AddOptions(APIView):
+    permission_classes=[IsTeacher]
+    def get_question(self,question_id):
+        try:
+            return Question.objects.get(id=question_id)
+        except:
+            raise Http404
+    def post(self,request,question_id):
+        question = self.get_question(question_id)
+        if request.user.profile != question.quiz.classroom.teacher:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        if question.answers.count() >= 4:
+            return Response({'detail':"options already added."},status=status.HTTP_400_BAD_REQUEST)
+        try: 
+            choice1=request.data['choice1']
+            choice2=request.data['choice2']
+            choice3=request.data['choice3']
+        except:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        choice1['question']= question.id
+        choice2['question']= question.id
+        choice3['question']= question.id
+        serializer1 = serializers.ChoiceSerializer(data=choice1)
+        serializer2 = serializers.ChoiceSerializer(data=choice2)
+        serializer3 = serializers.ChoiceSerializer(data=choice3)
+        if serializer1.is_valid() and serializer2.is_valid() and serializer3.is_valid():
+            serializer1.save()
+            serializer2.save()
+            serializer3.save()
+            question = serializers.QuestionSerializer(question)
+            return Response(question.data,status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+class ShareQuiz(APIView):
+    permission_classes = [IsTeacher]
+    def get_quiz(self,quiz_id):
+        try:
+            return Quiz.objects.get(id=quiz_id)
+        except:
+            raise Http404
+    def post(self,request,quiz_id,format=None):
+        quiz=self.get_quiz(quiz_id)
+        if request.user.profile != quiz.classroom.teacher:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        quiz.shared=True
+        quiz.save()
+        email_list=[]
+        for student in quiz.classroom.student.all():
+            email_list.append(student.user.email)
+        send_mail(
+            'You have got a new quiz',
+            f'Your teacher {quiz.classroom.teacher.name} shared a new quiz {quiz.name}.\n Open SmartLearn app for more information.',
+            'SmartLearn <nidhi.smartlearn.gmail.com>',
+            email_list,
+            fail_silently=False
+        )
+        return Response({"detail" : "Shared"})
+
+class SubmitQuizAnswer(APIView):
+    permission_classes = [IsAuthenticated]
+    def get_quiz(self,quiz_id):
+        try:
+            return Quiz.objects.get(id=quiz_id)
+        except:
+            raise Http404
+    def post(self,request,quiz_id):
+        quiz=self.get_quiz(quiz_id)
+        if request.user.profile not in quiz.classroom.student.all():
+            return response(status=status.HTTP_403_FORBIDDEN)
+        if request.user.profile.quiz_taken.get(quiz=quiz_id):
+            return Response({'detail':'Already submitted'},status=status.HTTP_400_BAD_REQUEST)
+        answers = list(request.data)
+        correct_answer = 0
+        for answer in answers:
+            try:
+                if Answer.objects.get(id=answer).is_correct == True:
+                    correct_answer +=1
+            except:
+                return Response(status=status.HTTP_400_BAD_REQUEST)
+        data = {
+            'student' : request.user.profile.id,
+            'quiz':quiz.id,
+            'correct_answers' : correct_answer
+        }
+        serializer = serializers.QuizTakerSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(serializer.data,status=status.HTTP_201_CREATED)
+    def get(self,request,quiz_id,format=None):
+        quiz = self.get_quiz(quiz_id)
+        if request.user.profile == quiz.classroom.teacher:
+            all_answers = quiz.submitted_by.all()
+            serializer = serializers.QuizTakerSerializer(all_answers,many=True,context={'request':request})
+        elif request.user.profile in quiz.classroom.student.all():
+            answer = quiz.submitted_by.get(student=request.user.profile)
+            serializer = serializers.QuizTakerSerializer(answer,context={'request':request})
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        return Response(serializer.data)
+
+
+
