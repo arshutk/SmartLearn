@@ -74,40 +74,62 @@ class UserViewSet(viewsets.ModelViewSet):
         else:
             return Response(status = status.HTTP_400_BAD_REQUEST)
 
-
-    def put(self, request, pk):
-        user = User.objects.get(pk = pk)
-        serializer = UserSerializer(user, data = request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status = status.HTTP_200_OK)
-        return Response(serializer.errors,status = status.HTTP_401_UNAUTHORIZED)
-
-    def partial_update(self, request, pk):
-        if request.user == User.objects.get(pk = pk):
-
+    def update(self, request, pk):
+        if str(request.user) == User.objects.get(pk = pk).email:
             new_password = request.data.get('password', "")
-            user = User.objects.get(pk = pk)
+            if new_password:
+                user = User.objects.get(pk = pk)
+                print(user)
+                user.set_password(new_password)
+                user.save()
+                serializer = UserProfileSerializer(user.profile,context={'request': request})
+                data = dict()
+                data['email']  = user.email
+                data['is_teacher'] = user.profile.is_teacher
+                data.update(serializer.data)
+                mail_body = "You have succesfully changed your password for your SmartLearn account"
+                context = {'body':mail_body}
+                html_content = loader.render_to_string('msg.html', context)
+                send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [user.email], html_message = html_content, fail_silently = False) 
+                # send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [user.email], fail_silently = False) 
+                return Response(data, status = status.HTTP_202_ACCEPTED)
+            return Response(status = status.HTTP_400_BAD_REQUEST)
+        return Response(status = status.HTTP_401_UNAUTHORIZED)
 
-            if not user.check_password(new_password): 
-                if new_password:
-                    user.set_password(new_password)
-                    user.save()
-                    serializer = UserProfileSerializer(user.profile,context={'request': request})
-                    data = dict()
-                    data['email']  = user.email
-                    data['is_teacher'] = user.profile.is_teacher
-                    data.update(serializer.data)
 
-                    mail_body = "You have succesfully changed your password for your SmartLearn account"
-                    context = {'body':mail_body}
-                    html_content = loader.render_to_string('msg.html', context)
-                    send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [user.email], html_message = html_content, fail_silently = False) 
+    # def put(self, request, pk):
+    #     user = User.objects.get(pk = pk)
+    #     serializer = UserSerializer(user, data = request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status = status.HTTP_200_OK)
+    #     return Response(serializer.errors,status = status.HTTP_401_UNAUTHORIZED)
 
-                    return Response(data, status = status.HTTP_202_ACCEPTED)
-                return Response({'detail':'Password must not be null'}, status = status.HTTP_400_BAD_REQUEST)
-            return Response({'detail':'Password is same as old'},status = status.HTTP_406_NOT_ACCEPTABLE)
-        return Response({'detail':'User does not exists'},status = status.HTTP_401_UNAUTHORIZED)
+    # def partial_update(self, request, pk):
+    #     if request.user == User.objects.get(pk = pk):
+
+    #         new_password = request.data.get('password', "")
+    #         user = User.objects.get(pk = pk)
+
+    #         if not user.check_password(new_password): 
+    #             if new_password:
+    #                 user.set_password(new_password)
+    #                 user.save()
+    #                 serializer = UserProfileSerializer(user.profile,context={'request': request})
+    #                 data = dict()
+    #                 data['email']  = user.email
+    #                 data['is_teacher'] = user.profile.is_teacher
+    #                 data.update(serializer.data)
+
+    #                 mail_body = "You have succesfully changed your password for your SmartLearn account"
+    #                 context = {'body':mail_body}
+    #                 html_content = loader.render_to_string('msg.html', context)
+                    # send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [user.email], html_message = html_content, fail_silently = False) 
+
+    #                 return Response(data, status = status.HTTP_202_ACCEPTED)
+    #             return Response({'detail':'Password must not be null'}, status = status.HTTP_400_BAD_REQUEST)
+    #         return Response({'detail':'Password is same as old'},status = status.HTTP_406_NOT_ACCEPTABLE)
+    #     return Response({'detail':'User does not exists'},status = status.HTTP_401_UNAUTHORIZED)
 
     def get_permissions(self):
         permission_classes = []
@@ -239,5 +261,5 @@ def send_otp_email(email, body):
 
     html_content = loader.render_to_string('index.html', context)
     mail_body = f"{body} is {otp}. This OTP will be valid for 5 minutes."
-    # send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [email], html_message = html_content, fail_silently = False) 
+    send_mail('Greetings from SmartLearn Team', mail_body, 'SmartLearn<nidhi.smartlearn@gmail.com>', [email], html_message = html_content, fail_silently = False) 
     return None

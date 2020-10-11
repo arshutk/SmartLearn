@@ -1,6 +1,6 @@
-from django.shortcuts import render
+# from django.shortcuts import render
 from datetime import timedelta,datetime
-from rest_framework import viewsets,status,generics,mixins
+from rest_framework import viewsets, status, generics, mixins
 from django.core import serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny,IsAuthenticated
@@ -40,7 +40,6 @@ class ClassroomViewSet(mixins.CreateModelMixin,
     def get_queryset(self):
         if self.request.user.profile.is_teacher == True:
             return Classroom.objects.filter(teacher=self.request.user.profile)
-        print(self.request.user.profile)
         return  Classroom.objects.filter(student=self.request.user.profile)
 
     def create(self, request):
@@ -110,8 +109,7 @@ class AssignmentPost(APIView):
             data=request.data.copy()
             data['classroom'] = classroom.id
             try:
-                if datetime.strptime(data['submit_by'],'%Y-%m-%d %H:%M:%S') <= datetime.now()+timedelta(minutes=5):
-                # if pytz.utc.localize(datetime.datetime.now()) >= assignment.submit_by:
+                if datetime.strptime(data['submit_by'],'%Y-%m-%d %H:%M:%S.%f') <= datetime.now()+timedelta(minutes=5):
                     return Response({"submit_by" : "[can not be smaller than current time + 5 minutes.]"},status=status.HTTP_400_BAD_REQUEST)
             except:
                 pass
@@ -177,11 +175,7 @@ class AnswerSheetPost(APIView):
             except:
                 data = request.data
                 if assignment.submit_by:
-                    print(timezone.now())
-                    print(assignment.submit_by)
-                    print(pytz.utc.localize(datetime.datetime.now()))
-                    # if timezone.now() >= assignment.submit_by:
-                    if pytz.utc.localize(datetime.datetime.now()) >= assignment.submit_by:
+                    if pytz.utc.localize(datetime.now()) >= assignment.submit_by:
                         data['late_submitted'] = True
                 data['student'] = user_profile.id
                 data['assignment'] = assignment.id
@@ -238,7 +232,7 @@ class AnswerSheetView(APIView):
                 'SmartLearn <nidhi.smartlearn@gmail.com>',
                 [answer.student.user.email,],
                 fail_silently=False,
-            )
+                )
                 serializer = AnswerSheetSerializer(answer,context={'request': request})
                 return Response({"detail" : "Answer sheet checked"},status=status.HTTP_200_OK)
             return Response({'detail': "marks_scored should not be greater that max_marks"},status=status.HTTP_400_BAD_REQUEST)
@@ -304,6 +298,7 @@ class PortalStudentView(APIView):
             if answer.checked:
                 total_marks+=assignment.max_marks
                 marks_obtained+=answer.marks_scored
+                details['marks_scored'] = answer.marks_scored
             assignment_list.append(details)
         if total_marks!=0:
             percentage = round(100*marks_obtained/total_marks,2)
@@ -322,7 +317,7 @@ class DoubtSectionView(APIView):
     def get(self, request, class_id):
         try:
             classroom = Classroom.objects.get(pk=class_id)
-            doubts = classroom.doubt.all()
+            doubts    = classroom.doubt.all()
         except:
             raise Http404
 
@@ -400,16 +395,20 @@ class PortalTeacherView(APIView):
                 total_marks  = 0
                 marks_obtained = 0
                 for assignment in classroom.assignment.all():
-                    total_marks  += assignment.max_marks
+                    # total_marks  += assignment.max_marks
                     try:
                         answer = assignment.answersheet.get(student = student)
                         if answer.checked:
-                            marks_obtained = answer.marks_scored
+                            total_marks  += assignment.max_marks
+                            marks_obtained += answer.marks_scored
                             continue
                         unchecked_assignment.append(AssignmentSerializer(assignment, context={'request': request}).data)
                     except:
+                        total_marks  += assignment.max_marks
                         unattemped_assignment.append(AssignmentSerializer(assignment, context={'request': request}).data)
                         continue
+                if not total_marks:
+                    return Response({'msg':'There are no assignments in this Classroom'}, status = status.HTTP_204_NO_CONTENT)
                 overall_percentage = round(marks_obtained/total_marks*100, 2)
                 student_record['student']                = UserProfileSerializer(student, context={'request': request}).data  
                 student_record['maximum_marks']          = total_marks
@@ -500,7 +499,10 @@ class PrivateChatDeleteView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get_chat_sender(self, chat_id):
-        return PrivateChat.objects.get(pk = chat_id).sender
+        try:
+            return PrivateChat.objects.get(pk = chat_id).sender
+        except:
+            Http404
 
     def delete(self, request, class_id, chat_id):
         sender = self.get_chat_sender(chat_id)
