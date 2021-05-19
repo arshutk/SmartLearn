@@ -1,11 +1,11 @@
 # SmartLearn 
-![More images in Screenshots folder](./project_images/banner.jpg)
+![More images in Screenshots folder](./project_images/banner.jpeg)
 >SmartLearn aims to create a interface for teachers to simply create, distribute, and grade assignments. And where students can ask doubt, submit work and view their progress. 
 
 ## Screenshots
 
 ## 1. Classroom 
-![More images in Screenshots folder](./project_images/classroom.jpeg)
+![More images in Screenshots folder](./project_images/classroom.jpg)
 
 ## 2. Assignment Creation (For Teacher)
 ![More images in Screenshots folder](./project_images/assignment_creation.jpg)
